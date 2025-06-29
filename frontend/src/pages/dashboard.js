@@ -6,32 +6,73 @@ const CulturalMap = dynamic(
 	() => import("@/components/CulturalMap/CulturalMap"),
 	{ ssr: false }
 );
-//import CulturalMap from "../components/CulturalMap/CulturalMap";
 import api from "@/utils/api";
+
+// Helper to extract category from a site's properties
+function getCategory(props) {
+	return (
+		props.category ||
+		props.Category ||
+		props.tourism ||
+		props.amenity ||
+		props.artwork_type ||
+		props.museum ||
+		props.gallery ||
+		props.theatre ||
+		"Uncategorized"
+	);
+}
+
+function capitalize(str) {
+	if (!str) return "";
+	return str.charAt(0).toUpperCase() + str.slice(1);
+}
 
 export default function DashboardPage() {
 	const [token, setToken] = useState("");
 	const [favorites, setFavorites] = useState([]);
 	const [categoryFilter, setCategoryFilter] = useState("");
 	const [keyword, setKeyword] = useState("");
+	const [allCategories, setAllCategories] = useState([]);
 
+	// Fetch token
 	useEffect(() => {
 		const stored = Cookies.get("token");
 		if (stored) setToken(stored);
 	}, []);
 
+	// Fetch favorites
 	useEffect(() => {
 		if (!token) return;
 		const fetchFavorites = async () => {
 			try {
 				const res = await api.get("/users/favorites");
-				console.log("Favorites response:", res.data);
 				setFavorites(res.data);
 			} catch (err) {
 				console.error("Error fetching favorites:", err);
 			}
 		};
 		fetchFavorites();
+	}, [token]);
+
+	// Fetch all sites just to get categories
+	useEffect(() => {
+		if (!token) return;
+		const fetchSites = async () => {
+			try {
+				const res = await api.get("/cultural-sites", {
+					headers: { Authorization: `Bearer ${token}` },
+				});
+				const sites = res.data;
+				const categories = Array.from(
+					new Set(sites.map((site) => getCategory(site.properties || site)))
+				);
+				setAllCategories(categories);
+			} catch (err) {
+				console.error("Error fetching sites for categories:", err);
+			}
+		};
+		fetchSites();
 	}, [token]);
 
 	const addFavorite = async (site) => {
@@ -54,7 +95,6 @@ export default function DashboardPage() {
 	};
 
 	const removeFavorite = async (id) => {
-		console.log("Removing favorite with ID:", id);
 		try {
 			const res = await api.delete(`/users/favorites/${id}`, {
 				headers: { Authorization: `Bearer ${token}` },
@@ -69,22 +109,33 @@ export default function DashboardPage() {
 		<div className="p-4">
 			<h1 className="text-2xl font-bold mb-4">Dashboard</h1>
 
-			<div className="mb-4">
-				<input
-					type="text"
-					placeholder="Search..."
-					className="border p-2 mr-2"
-					onChange={(e) => setKeyword(e.target.value)}
-				/>
-				<select
-					onChange={(e) => setCategoryFilter(e.target.value)}
-					className="border p-2"
-				>
-					<option value="">All Categories</option>
-					<option value="Museum">Museum</option>
-					<option value="Theater">Theater</option>
-					<option value="Gallery">Gallery</option>
-				</select>
+			<div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+				<div className="relative w-full sm:w-1/2">
+					<input
+						type="text"
+						placeholder="Search cultural sites..."
+						className="w-full bg-white border border-gray-300 text-sm text-gray-700 rounded-xl py-2.5 pl-4 pr-12 shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition"
+						onChange={(e) => setKeyword(e.target.value)}
+					/>
+					<div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+						🔍
+					</div>
+				</div>
+
+				<div className="w-full sm:w-1/3">
+					<select
+						onChange={(e) => setCategoryFilter(e.target.value)}
+						value={categoryFilter}
+						className="w-full bg-white border border-gray-300 text-sm text-gray-700 rounded-xl py-2.5 px-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition"
+					>
+						<option value="">All Categories</option>
+						{allCategories.map((cat) => (
+							<option key={cat} value={cat}>
+								{capitalize(cat)}
+							</option>
+						))}
+					</select>
+				</div>
 			</div>
 
 			<CulturalMap
@@ -97,7 +148,7 @@ export default function DashboardPage() {
 			<h2 className="text-xl font-semibold mt-6">My Favorites</h2>
 			<ul className="mt-2">
 				{favorites
-					.filter((site) => site && site.name) // skip null/undefined or missing name
+					.filter((site) => site && site.name)
 					.map((site) => (
 						<li key={site._id} className="border-b py-2 flex justify-between">
 							<span>{site.name}</span>

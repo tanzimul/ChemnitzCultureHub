@@ -12,6 +12,20 @@ L.Icon.Default.mergeOptions({
 	shadowUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png",
 });
 
+function getCategory(props) {
+	return (
+		props.category ||
+		props.Category ||
+		props.tourism ||
+		props.amenity ||
+		props.artwork_type ||
+		props.museum ||
+		props.gallery ||
+		props.theatre ||
+		"Uncategorized"
+	);
+}
+
 export default function CulturalMap({
 	token,
 	categoryFilter,
@@ -51,6 +65,27 @@ export default function CulturalMap({
 			});
 	}, [token]);
 
+	const filteredSites = sites.filter((site) => {
+		if (!site || !site.name) return false;
+
+		const category = getCategory(site.properties || site);
+		const categoryMatch =
+			!categoryFilter ||
+			category.toLowerCase() === categoryFilter.toLowerCase();
+
+		const keywordMatch =
+			!keyword ||
+			site.name.toLowerCase().includes(keyword.toLowerCase()) ||
+			(site.properties?.address &&
+				site.properties.address
+					.toLowerCase()
+					.includes(keyword.toLowerCase())) ||
+			(site.description &&
+				site.description.toLowerCase().includes(keyword.toLowerCase()));
+
+		return categoryMatch && keywordMatch;
+	});
+
 	return (
 		<>
 			{error && <div style={{ color: "red", margin: "1em 0" }}>{error}</div>}
@@ -60,8 +95,8 @@ export default function CulturalMap({
 				style={{ height: "700px", width: "100%" }}
 			>
 				<TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-				{Array.isArray(sites) &&
-					sites.map((site) =>
+				{Array.isArray(filteredSites) &&
+					filteredSites.map((site) =>
 						site.location &&
 						Array.isArray(site.location.coordinates) &&
 						site.location.coordinates.length === 2 ? (
@@ -70,6 +105,7 @@ export default function CulturalMap({
 								position={site.location.coordinates.slice().reverse()}
 							>
 								<Popup>
+									{/* ...existing popup code... */}
 									<div>
 										<em>{site._id}</em>
 										<br />
@@ -96,7 +132,6 @@ export default function CulturalMap({
 											<div>📞 {site.properties.phone}</div>
 										)}
 										<div>{site.description}</div>
-										{/* Show all properties except @id, @geometry, name, phone, website */}
 										<div style={{ marginTop: "0.5em" }}>
 											{site.properties &&
 												Object.entries(site.properties)
@@ -114,7 +149,6 @@ export default function CulturalMap({
 														</div>
 													))}
 										</div>
-										{/* Add to Favorites Button */}
 										{onAddFavorite && (
 											<button
 												style={{
