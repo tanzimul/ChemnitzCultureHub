@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { useState } from "react";
+import { useAuth } from "@/context/AuthContext";
 
-export default function Navbar({ user, logout }) {
+export default function Navbar() {
 	const [isMenuOpen, setIsMenuOpen] = useState(false);
+	const { user, logout } = useAuth();
 
 	return (
 		<nav className="bg-white shadow-lg text-black">

@@ -5,31 +5,31 @@ import Navbar from "./Navbar";
 import Cookies from "js-cookie";
 
 export default function Layout({ children }) {
-	const [user, setUser] = useState(null);
+	//const [user, setUser] = useState(null);
 	const [loading, setLoading] = useState(true);
 
 	useEffect(() => {
-		const token = Cookies.get("token");
-		const userData = Cookies.get("user");
+		// const token = Cookies.get("token");
+		// const userData = Cookies.get("user");
 
-		if (token && userData) {
-			try {
-				setUser(JSON.parse(userData));
-			} catch (error) {
-				console.error("Error parsing user data:", error);
-				Cookies.remove("token");
-				Cookies.remove("user");
-			}
-		}
+		// if (token && userData) {
+		// 	try {
+		// 		setUser(JSON.parse(userData));
+		// 	} catch (error) {
+		// 		console.error("Error parsing user data:", error);
+		// 		Cookies.remove("token");
+		// 		Cookies.remove("user");
+		// 	}
+		// }
 		setLoading(false);
 	}, []);
 
-	const logout = () => {
-		Cookies.remove("token");
-		Cookies.remove("user");
-		setUser(null);
-		window.location.href = "/";
-	};
+	// const logout = () => {
+	// 	Cookies.remove("token");
+	// 	Cookies.remove("user");
+	// 	setUser(null);
+	// 	window.location.href = "/";
+	// };
 
 	if (loading) {
 		return (
@@ -41,7 +41,8 @@ export default function Layout({ children }) {
 
 	return (
 		<div className="min-h-screen bg-gray-50">
-			<Navbar user={user} logout={logout} />
+			{/* <Navbar user={user} logout={logout} /> */}
+			<Navbar />
 			<main className="container mx-auto px-4 py-8">{children}</main>
 		</div>
 	);

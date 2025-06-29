@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import api from "@/utils/api";
@@ -12,6 +13,7 @@ export default function Login() {
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState("");
 	const router = useRouter();
+	const { setUser } = useAuth();
 
 	const handleChange = (e) => {
 		setFormData({
@@ -33,6 +35,7 @@ export default function Login() {
 			Cookies.set("token", token, { expires: 7 });
 			Cookies.set("user", JSON.stringify(user), { expires: 7 });
 
+			setUser(user);
 			// Redirect to dashboard
 			router.push("/dashboard");
 		} catch (error) {

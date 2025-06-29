@@ -37,12 +37,12 @@ exports.addFavoriteLocation = async (req, res) => {
 		const userId = req.user._id;
 
 		const user = await User.findById(userId);
-		user.favoriteLocations.push({ name, address, description });
+		user.favorites.push({ name, address, description });
 		await user.save();
 
 		res.json({
 			message: "Favorite location added successfully",
-			favoriteLocations: user.favoriteLocations,
+			favorites: user.favorites,
 		});
 	} catch (error) {
 		console.error("Add favorite location error:", error);
@@ -53,21 +53,18 @@ exports.addFavoriteLocation = async (req, res) => {
 // Remove Favorite Location
 exports.removeFavoriteLocation = async (req, res) => {
 	try {
-		const { locationId } = req.params;
-		const userId = req.user._id;
-
-		const user = await User.findById(userId);
-		user.favoriteLocations = user.favoriteLocations.filter(
-			(location) => location._id.toString() !== locationId
-		);
+		const id = req.params.id;
+		const user = await User.findById(req.user._id);
+		console.log(user.favorites, "User's favorites before removal");
+		if (!user.favorites) user.favorites = [];
+		user.favorites = user.favorites.filter((fav) => fav._id.toString() !== id);
 		await user.save();
-
 		res.json({
 			message: "Favorite location removed successfully",
-			favoriteLocations: user.favoriteLocations,
+			favorites: user.favorites,
 		});
 	} catch (error) {
-		console.error("Remove favorite location error:", error);
+		console.error("Remove favorite location error:", error.message);
 		res.status(500).json({ message: "Server error", error: error.message });
 	}
 };
@@ -75,8 +72,11 @@ exports.removeFavoriteLocation = async (req, res) => {
 // Get User's Favorite Locations
 exports.getFavoriteLocations = async (req, res) => {
 	try {
-		const user = await User.findById(req.user._id).select("favoriteLocations");
-		res.json({ favoriteLocations: user.favoriteLocations });
+		//const user = await User.findById(req.user._id).select("favoriteLocations");
+		const user = await User.findById(req.user._id);
+		console.log("User's favorite locations:", user.favorites);
+		res.json(user.favorites);
+		//res.json({ favoriteLocations: user.favoriteLocations });
 	} catch (error) {
 		console.error("Get favorite locations error:", error);
 		res.status(500).json({ message: "Server error" });

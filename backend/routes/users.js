@@ -27,6 +27,6 @@ router.post("/favorites", auth, addFavoriteLocation);
 // @route   DELETE /api/users/favorites/:locationId
 // @desc    Remove favorite location
 // @access  Private
-router.delete("/favorites/:locationId", auth, removeFavoriteLocation);
+router.delete("/favorites/:id", auth, removeFavoriteLocation);
 
 module.exports = router;

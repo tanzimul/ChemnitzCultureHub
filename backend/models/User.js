@@ -24,21 +24,37 @@ const userSchema = new mongoose.Schema(
 			required: [true, "Password is required"],
 			minlength: [6, "Password must be at least 6 characters"],
 		},
-		favoriteLocations: [
+		// favorites: [
+		// 	{
+		// 		name: {
+		// 			type: String,
+		// 			required: false,
+		// 			trim: true,
+		// 		},
+		// 		address: {
+		// 			type: String,
+		// 			trim: true,
+		// 		},
+		// 		description: {
+		// 			type: String,
+		// 			trim: true,
+		// 		},
+		// 		addedAt: {
+		// 			type: Date,
+		// 			default: Date.now,
+		// 		},
+		// 	},
+		// ],
+		//favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: "CulturalSite" }],
+		favorites: [
 			{
-				name: {
-					type: String,
-					required: false,
-					trim: true,
+				_id: {
+					type: mongoose.Schema.Types.ObjectId,
+					auto: true,
 				},
-				address: {
-					type: String,
-					trim: true,
-				},
-				description: {
-					type: String,
-					trim: true,
-				},
+				name: String,
+				address: String,
+				description: String,
 				addedAt: {
 					type: Date,
 					default: Date.now,

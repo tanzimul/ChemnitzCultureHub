@@ -44,6 +44,7 @@ export default function SampleList({ userSamples = false }) {
 		try {
 			setLoading(true);
 			const endpoint = userSamples ? "/samples/my" : "/samples";
+			console.log("Fetching samples from:", endpoint);
 			const params = userSamples
 				? {}
 				: {
