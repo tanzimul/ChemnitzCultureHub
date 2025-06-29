@@ -37,17 +37,34 @@ const userSchema = new mongoose.Schema(
 		},
 		favorites: [
 			{
-				_id: {
-					type: mongoose.Schema.Types.ObjectId,
-					auto: true,
-				},
-				name: String,
-				address: String,
-				description: String,
-				addedAt: {
-					type: Date,
-					default: Date.now,
-				},
+				type: mongoose.Schema.Types.ObjectId,
+				ref: "CulturalSite",
+			},
+		],
+		// favorites: [
+		// 	{
+		// 		_id: {
+		// 			type: mongoose.Schema.Types.ObjectId,
+		// 			auto: true,
+		// 		},
+		// 		name: String,
+		// 		category: String,
+		// 		location: Object, // GeoJSON or whatever structure you use
+		// 		address: String,
+		// 		contact: String,
+		// 		website: String,
+		// 		phone: String,
+		// 		description: String,
+		// 		addedAt: {
+		// 			type: Date,
+		// 			default: Date.now,
+		// 		},
+		// 	},
+		// ],
+		visitedSites: [
+			{
+				type: mongoose.Schema.Types.ObjectId,
+				ref: "CulturalSite",
 			},
 		],
 	},

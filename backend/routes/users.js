@@ -5,6 +5,8 @@ const {
 	removeFavoriteLocation,
 	getFavoriteLocations,
 	updateLocation,
+	getMe,
+	collectAndGetVisitedSites,
 } = require("../controllers/userController");
 const auth = require("../middleware/auth");
 
@@ -34,5 +36,15 @@ router.delete("/favorites/:id", auth, removeFavoriteLocation);
 // @desc    Update user's current location
 // @access  Private
 router.put("/location", auth, updateLocation);
+
+// @route   GET /api/users/me
+// @desc    Get user's data
+// @access  Private
+router.get("/me", auth, getMe);
+
+// @route   GET /api/users/visited-sites
+// @desc    Get user's visited cultural sites
+// @access  Private
+router.get("/visited-sites", auth, collectAndGetVisitedSites);
 
 module.exports = router;

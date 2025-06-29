@@ -1,8 +1,15 @@
 import { useEffect, useState } from "react";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import {
+	MapContainer,
+	TileLayer,
+	Marker,
+	Popup,
+	CircleMarker,
+} from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import API_BASE_URL from "@/utils/api";
+//import API_BASE_URL from "@/utils/api";
+import api from "@/utils/api";
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -10,6 +17,15 @@ L.Icon.Default.mergeOptions({
 		"https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png",
 	iconUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png",
 	shadowUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png",
+});
+
+const userIcon = new L.Icon({
+	iconUrl: "/user-location.png", // This will resolve to http://localhost:3000/user-location.png in dev
+	iconSize: [25, 41],
+	iconAnchor: [12, 41],
+	popupAnchor: [1, -34],
+	shadowUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png",
+	shadowSize: [41, 41],
 });
 
 function getCategory(props) {
@@ -31,6 +47,7 @@ export default function CulturalMap({
 	categoryFilter,
 	keyword,
 	onAddFavorite,
+	userLocation,
 }) {
 	const [sites, setSites] = useState([]);
 	const [error, setError] = useState("");
@@ -41,16 +58,10 @@ export default function CulturalMap({
 			setSites([]);
 			return;
 		}
-		fetch("http://localhost:9000/api/cultural-sites", {
-			headers: { Authorization: `Bearer ${token}` },
-		})
-			.then(async (res) => {
-				if (!res.ok) {
-					setError("Unauthorized or failed to fetch sites.");
-					setSites([]);
-					return;
-				}
-				const data = await res.json();
+		const fetchSites = async () => {
+			try {
+				const res = await api.get("/cultural-sites");
+				const data = res.data;
 				if (Array.isArray(data)) {
 					setSites(data);
 					setError("");
@@ -58,11 +69,12 @@ export default function CulturalMap({
 					setSites([]);
 					setError("Unexpected response from server.");
 				}
-			})
-			.catch(() => {
+			} catch (err) {
 				setSites([]);
 				setError("Network error.");
-			});
+			}
+		};
+		fetchSites();
 	}, [token]);
 
 	const filteredSites = sites.filter((site) => {
@@ -95,6 +107,7 @@ export default function CulturalMap({
 				style={{ height: "700px", width: "100%" }}
 			>
 				<TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+				{/* All cultural site markers */}
 				{Array.isArray(filteredSites) &&
 					filteredSites.map((site) =>
 						site.location &&
@@ -105,7 +118,6 @@ export default function CulturalMap({
 								position={site.location.coordinates.slice().reverse()}
 							>
 								<Popup>
-									{/* ...existing popup code... */}
 									<div>
 										<em>{site._id}</em>
 										<br />
@@ -169,6 +181,23 @@ export default function CulturalMap({
 								</Popup>
 							</Marker>
 						) : null
+					)}
+
+				{/* User's current location marker (distinct color/icon) */}
+				{userLocation &&
+					Array.isArray(userLocation.coordinates) &&
+					userLocation.coordinates.length === 2 &&
+					typeof userLocation.coordinates[0] === "number" &&
+					typeof userLocation.coordinates[1] === "number" && (
+						<Marker
+							position={[
+								userLocation.coordinates[1], // latitude
+								userLocation.coordinates[0], // longitude
+							]}
+							icon={userIcon}
+						>
+							<Popup>Your Saved Location</Popup>
+						</Marker>
 					)}
 			</MapContainer>
 		</>
