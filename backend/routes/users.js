@@ -4,6 +4,7 @@ const {
 	addFavoriteLocation,
 	removeFavoriteLocation,
 	getFavoriteLocations,
+	updateLocation,
 } = require("../controllers/userController");
 const auth = require("../middleware/auth");
 
@@ -28,5 +29,10 @@ router.post("/favorites", auth, addFavoriteLocation);
 // @desc    Remove favorite location
 // @access  Private
 router.delete("/favorites/:id", auth, removeFavoriteLocation);
+
+// @route   PUT /api/users/location
+// @desc    Update user's current location
+// @access  Private
+router.put("/location", auth, updateLocation);
 
 module.exports = router;

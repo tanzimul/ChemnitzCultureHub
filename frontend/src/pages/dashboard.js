@@ -75,6 +75,35 @@ export default function DashboardPage() {
 		fetchSites();
 	}, [token]);
 
+	const handleGetLocation = () => {
+		if (!window.confirm("Do you allow us to access your current location?"))
+			return;
+
+		if ("geolocation" in navigator) {
+			navigator.geolocation.getCurrentPosition(
+				async (position) => {
+					const { latitude, longitude } = position.coords;
+					try {
+						console.log("Saving location:", latitude, longitude);
+						await api.put(
+							"/users/location",
+							{ latitude, longitude },
+							{ headers: { Authorization: `Bearer ${token}` } }
+						);
+						alert("Location saved!");
+					} catch (err) {
+						alert("Failed to save location.");
+					}
+				},
+				(error) => {
+					alert("Unable to retrieve your location.");
+				}
+			);
+		} else {
+			alert("Geolocation is not supported by your browser.");
+		}
+	};
+
 	const addFavorite = async (site) => {
 		try {
 			const res = await api.post(
@@ -144,6 +173,13 @@ export default function DashboardPage() {
 				keyword={keyword}
 				onAddFavorite={addFavorite}
 			/>
+
+			<button
+				onClick={handleGetLocation}
+				className="bg-blue-600 text-white px-4 py-2 rounded-md mt-4 hover:bg-blue-700 transition"
+			>
+				Save My Current Location
+			</button>
 
 			<h2 className="text-xl font-semibold mt-6">My Favorites</h2>
 			<ul className="mt-2">

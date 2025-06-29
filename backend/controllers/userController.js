@@ -55,7 +55,7 @@ exports.removeFavoriteLocation = async (req, res) => {
 	try {
 		const id = req.params.id;
 		const user = await User.findById(req.user._id);
-		console.log(user.favorites, "User's favorites before removal");
+		//console.log(user.favorites, "User's favorites before removal");
 		if (!user.favorites) user.favorites = [];
 		user.favorites = user.favorites.filter((fav) => fav._id.toString() !== id);
 		await user.save();
@@ -72,13 +72,39 @@ exports.removeFavoriteLocation = async (req, res) => {
 // Get User's Favorite Locations
 exports.getFavoriteLocations = async (req, res) => {
 	try {
-		//const user = await User.findById(req.user._id).select("favoriteLocations");
 		const user = await User.findById(req.user._id);
-		console.log("User's favorite locations:", user.favorites);
 		res.json(user.favorites);
-		//res.json({ favoriteLocations: user.favoriteLocations });
 	} catch (error) {
 		console.error("Get favorite locations error:", error);
 		res.status(500).json({ message: "Server error" });
+	}
+};
+
+// Update User Location
+exports.updateLocation = async (req, res) => {
+	try {
+		const userId = req.user._id;
+		const { latitude, longitude } = req.body;
+		console.log("Updating location for user:", latitude, longitude);
+		if (typeof latitude !== "number" || typeof longitude !== "number") {
+			return res.status(400).json({ message: "Invalid coordinates" });
+		}
+
+		const user = await User.findByIdAndUpdate(
+			userId,
+			{
+				currentLocation: {
+					type: "Point",
+					coordinates: [longitude, latitude],
+				},
+			},
+			{ new: true }
+		);
+		res.json({
+			message: "Location updated",
+			currentLocation: user.currentLocation,
+		});
+	} catch (error) {
+		res.status(500).json({ message: "Server error", error: error.message });
 	}
 };
