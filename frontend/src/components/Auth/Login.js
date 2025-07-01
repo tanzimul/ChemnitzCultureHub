@@ -6,6 +6,7 @@ import api from "@/utils/api";
 import Cookies from "js-cookie";
 
 export default function Login() {
+	const { setUser } = useAuth();
 	const [formData, setFormData] = useState({
 		email: "",
 		password: "",
@@ -13,7 +14,6 @@ export default function Login() {
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState("");
 	const router = useRouter();
-	const { setUser } = useAuth();
 
 	const handleChange = (e) => {
 		setFormData({

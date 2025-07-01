@@ -119,8 +119,6 @@ export default function CulturalMap({
 							>
 								<Popup>
 									<div>
-										<em>{site._id}</em>
-										<br />
 										<strong>{site.name}</strong>
 										<br />
 										<em>{site.category}</em>
@@ -153,7 +151,8 @@ export default function CulturalMap({
 															key !== "@geometry" &&
 															key !== "name" &&
 															key !== "phone" &&
-															key !== "website"
+															key !== "website" &&
+															key !== "image"
 													)
 													.map(([key, value]) => (
 														<div key={key}>

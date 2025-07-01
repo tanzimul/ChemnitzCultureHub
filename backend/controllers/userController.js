@@ -98,27 +98,34 @@ exports.updateLocation = async (req, res) => {
 	try {
 		const userId = req.user._id;
 		const { latitude, longitude } = req.body;
-		console.log("Updating location for user:", latitude, longitude);
+
 		if (typeof latitude !== "number" || typeof longitude !== "number") {
 			return res.status(400).json({ message: "Invalid coordinates" });
 		}
 
-		const user = await User.findByIdAndUpdate(
-			userId,
-			{
-				currentLocation: {
-					type: "Point",
-					coordinates: [longitude, latitude],
-				},
-			},
-			{ new: true }
-		);
+		const user = await User.findById(userId);
+		if (!user) {
+			return res.status(404).json({ message: "User not found" });
+		}
+
+		// Update location
+		user.currentLocation = {
+			type: "Point",
+			coordinates: [longitude, latitude],
+		};
+
+		// Clear visitedSites when location changes
+		user.visitedSites = [];
+
+		await user.save();
+
 		res.json({
 			message: "Location updated",
 			currentLocation: user.currentLocation,
 		});
 	} catch (error) {
-		res.status(500).json({ message: "Server error", error: error.message });
+		console.error("Update location error:", error);
+		res.status(500).json({ message: "Server error" });
 	}
 };
 

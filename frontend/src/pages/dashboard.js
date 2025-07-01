@@ -1,14 +1,19 @@
 "use client";
 import Cookies from "js-cookie";
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
+import api from "@/utils/api";
+import { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
+import Review from "@/components/Review/Review";
+import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/router";
+
+// Dynamically import the map component (client-side only)
 const CulturalMap = dynamic(
 	() => import("@/components/CulturalMap/CulturalMap"),
 	{ ssr: false }
 );
-import api from "@/utils/api";
-import { Toaster } from "react-hot-toast";
-import toast from "react-hot-toast";
 
 // Helper to extract category from a site's properties
 function getCategory(props) {
@@ -25,12 +30,28 @@ function getCategory(props) {
 	);
 }
 
+// Capitalize first letter
 function capitalize(str) {
 	if (!str) return "";
 	return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
+// Check if user has reviewed a site
+function hasUserReviewed(siteId, userId, siteReviews) {
+	const reviews = siteReviews[siteId];
+	if (!Array.isArray(reviews)) return false;
+	return reviews.some((review) => {
+		const reviewUserId =
+			typeof review.user === "string" ? review.user : review.user?._id;
+		return reviewUserId === userId;
+	});
+}
+
 export default function DashboardPage() {
+	// State declarations
+	const router = useRouter();
+	const { user } = useAuth();
+	const userId = user?._id || user?.id;
 	const [token, setToken] = useState("");
 	const [favorites, setFavorites] = useState([]);
 	const [categoryFilter, setCategoryFilter] = useState("");
@@ -40,6 +61,9 @@ export default function DashboardPage() {
 	const [visitedSites, setVisitedSites] = useState([]);
 	const [favPage, setFavPage] = useState(1);
 	const [visitedPage, setVisitedPage] = useState(1);
+	const [reviewSite, setReviewSite] = useState(null);
+	const [siteReviews, setSiteReviews] = useState({});
+	const [reviewsLoading, setReviewsLoading] = useState(false);
 
 	const FAVS_PER_PAGE = 10;
 	const VISITED_PER_PAGE = 10;
@@ -52,15 +76,24 @@ export default function DashboardPage() {
 	const visitedEnd = visitedStart + VISITED_PER_PAGE;
 	const paginatedVisited = visitedSites.slice(visitedStart, visitedEnd);
 
-	// Fetch token
+	// Get token from cookies on mount
 	useEffect(() => {
 		const stored = Cookies.get("token");
 		if (stored) setToken(stored);
 	}, []);
 
-	// Fetch favorites
+	// Redirect to login if not authenticated
+	useEffect(() => {
+		if (user === null) return; // Still loading
+		if (!user) {
+			router.replace("/");
+		}
+	}, [user, router]);
+
+	// Fetch user, favorites, location, visited sites on token change
 	useEffect(() => {
 		if (!token) return;
+
 		const fetchFavorites = async () => {
 			try {
 				const res = await api.get("/users/favorites");
@@ -69,9 +102,7 @@ export default function DashboardPage() {
 				console.error("Error fetching favorites:", err);
 			}
 		};
-		fetchFavorites();
 
-		if (!token) return;
 		const fetchUserLocation = async () => {
 			try {
 				const res = await api.get("/users/me", {
@@ -84,20 +115,29 @@ export default function DashboardPage() {
 				console.error("Error fetching user location:", err);
 			}
 		};
-		fetchUserLocation();
 
 		const fetchVisitedSites = async () => {
 			try {
-				const res = await api.get("/users/visited-sites"); // Optionally add ?maxDistance=2000
+				const res = await api.get("/users/visited-sites");
 				setVisitedSites(res.data);
 			} catch (err) {
-				console.error("Error fetching visited sites:", err);
+				if (err.response && err.response.status === 400) {
+					toast.error(
+						"Please save your current location to see visited sites."
+					);
+					setVisitedSites([]);
+				} else {
+					console.error("Error fetching visited sites:", err);
+				}
 			}
 		};
+
+		fetchFavorites();
+		fetchUserLocation();
 		fetchVisitedSites();
 	}, [token]);
 
-	// Fetch all sites just to get categories
+	// Fetch all sites to get categories
 	useEffect(() => {
 		if (!token) return;
 		const fetchSites = async () => {
@@ -117,6 +157,39 @@ export default function DashboardPage() {
 		fetchSites();
 	}, [token]);
 
+	// Fetch reviews for paginated visited sites
+	useEffect(() => {
+		const fetchAllSiteReviews = async () => {
+			if (visitedSites.length === 0) return;
+			setReviewsLoading(true);
+			const reviewsObj = {};
+			const paginated = visitedSites.slice(visitedStart, visitedEnd);
+
+			await Promise.all(
+				paginated.map(async (site) => {
+					try {
+						const res = await api.get(`/reviews/${site._id}`);
+						reviewsObj[site._id] = res.data;
+					} catch (error) {
+						console.error(`Error fetching reviews for ${site._id}:`, error);
+						reviewsObj[site._id] = [];
+					}
+				})
+			);
+
+			setSiteReviews((prev) => ({ ...prev, ...reviewsObj }));
+			setReviewsLoading(false);
+		};
+
+		fetchAllSiteReviews();
+	}, [visitedSites, visitedPage]);
+
+	// Handle review button click
+	const handleReviewClick = (site) => {
+		setReviewSite(site);
+	};
+
+	// Handle location update
 	const handleGetLocation = () => {
 		if (!window.confirm("Do you allow us to access your current location?"))
 			return;
@@ -131,14 +204,12 @@ export default function DashboardPage() {
 							{ latitude, longitude },
 							{ headers: { Authorization: `Bearer ${token}` } }
 						);
-						// Fetch updated user profile to get the new location
 						const res = await api.get("/users/me", {
 							headers: { Authorization: `Bearer ${token}` },
 						});
 						if (res.data.currentLocation) {
 							setUserLocation(res.data.currentLocation);
 						}
-						// Fetch visited sites after location update
 						const visitedRes = await api.get("/users/visited-sites");
 						setVisitedSites(visitedRes.data);
 						toast.success("Location saved!");
@@ -146,7 +217,7 @@ export default function DashboardPage() {
 						toast.error("Failed to save location.");
 					}
 				},
-				(error) => {
+				() => {
 					toast.error("Unable to retrieve your location.");
 				}
 			);
@@ -155,6 +226,7 @@ export default function DashboardPage() {
 		}
 	};
 
+	// Add favorite
 	const addFavorite = async (site) => {
 		try {
 			const res = await api.post(
@@ -166,7 +238,7 @@ export default function DashboardPage() {
 			toast.success("Added to favorites!");
 		} catch (error) {
 			if (error.response && error.response.status === 400) {
-				toast.error(error.response.data.message); // Right-side notification
+				toast.error(error.response.data.message);
 			} else {
 				console.error("Error adding favorite:", error);
 				toast.error("Failed to add favorite.");
@@ -174,6 +246,7 @@ export default function DashboardPage() {
 		}
 	};
 
+	// Remove favorite
 	const removeFavorite = async (id) => {
 		try {
 			const res = await api.delete(`/users/favorites/${id}`, {
@@ -185,11 +258,22 @@ export default function DashboardPage() {
 		}
 	};
 
+	// Show loading while checking auth
+	if (user === null) return <div>Loading...</div>;
+	if (!user) return null;
+
 	return (
 		<div className="p-4">
-			<Toaster position="top-right" />
+			<Toaster
+				position="top-right"
+				containerClassName="mt-16"
+				toastOptions={{
+					style: { marginTop: "4rem" },
+				}}
+			/>
 			<h1 className="text-2xl font-bold mb-4">Dashboard</h1>
 
+			{/* Search and filter controls */}
 			<div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
 				<div className="relative w-full sm:w-1/2">
 					<input
@@ -202,7 +286,6 @@ export default function DashboardPage() {
 						🔍
 					</div>
 				</div>
-
 				<div className="w-full sm:w-1/3">
 					<select
 						onChange={(e) => setCategoryFilter(e.target.value)}
@@ -219,6 +302,7 @@ export default function DashboardPage() {
 				</div>
 			</div>
 
+			{/* Map */}
 			<CulturalMap
 				token={token}
 				categoryFilter={categoryFilter}
@@ -234,7 +318,7 @@ export default function DashboardPage() {
 				Save My Current Location
 			</button>
 
-			{/* My Favorites Table */}
+			{/* Favorites Table */}
 			<h2 className="text-xl font-semibold mt-6">My Favorites</h2>
 			<div className="overflow-x-auto rounded-lg shadow mb-8">
 				<table className="min-w-full bg-white border border-gray-200">
@@ -243,8 +327,6 @@ export default function DashboardPage() {
 							<th className="py-3 px-4 text-left">#</th>
 							<th className="py-3 px-4 text-left">Name</th>
 							<th className="py-3 px-4 text-left">Category</th>
-							{/* <th className="py-3 px-4 text-left">Address</th> */}
-							{/* <th className="py-3 px-4 text-left">Contact</th> */}
 							<th className="py-3 px-4 text-left">Website</th>
 							<th className="py-3 px-4 text-left">Phone</th>
 							<th className="py-3 px-4 text-left">Description</th>
@@ -267,12 +349,6 @@ export default function DashboardPage() {
 									<td className="py-2 px-4">
 										{site.category || site.properties?.category}
 									</td>
-									{/* <td className="py-2 px-4">
-										{site.address || site.properties?.address}
-									</td> */}
-									{/* <td className="py-2 px-4">
-										{site.contact || site.properties?.contact || "-"}
-									</td> */}
 									<td className="py-2 px-4">
 										{site.website || site.properties?.website ? (
 											<a
@@ -356,22 +432,69 @@ export default function DashboardPage() {
 							<th className="py-3 px-4 text-left">#</th>
 							<th className="py-3 px-4 text-left">Name</th>
 							<th className="py-3 px-4 text-left">Category</th>
-							<th className="py-3 px-4 text-left">Description</th>
+							<th className="py-3 px-4 text-left">Rating</th>
+							<th className="py-3 px-4 text-left">Action</th>
 						</tr>
 					</thead>
 					<tbody>
 						{paginatedVisited.map((site, idx) => (
-							<tr
-								key={site._id}
-								className={idx % 2 === 0 ? "bg-gray-50" : "bg-white"}
-							>
-								<td className="py-2 px-4 font-medium">
-									{visitedStart + idx + 1}
-								</td>
-								<td className="py-2 px-4">{site.name}</td>
-								<td className="py-2 px-4">{site.category}</td>
-								<td className="py-2 px-4">{site.description}</td>
-							</tr>
+							<React.Fragment key={site._id}>
+								<tr className={idx % 2 === 0 ? "bg-gray-50" : "bg-white"}>
+									<td className="py-2 px-4 font-medium">
+										{visitedStart + idx + 1}
+									</td>
+									<td className="py-2 px-4">{site.name}</td>
+									<td className="py-2 px-4">{site.category}</td>
+									<td className="py-2 px-4">
+										{/* Always show average rating */}
+										{siteReviews[site._id] &&
+										siteReviews[site._id].length > 0 ? (
+											<span>
+												{(
+													siteReviews[site._id].reduce(
+														(sum, r) => sum + r.rating,
+														0
+													) / siteReviews[site._id].length
+												).toFixed(1)}{" "}
+												<span className="text-yellow-500">★</span>
+											</span>
+										) : (
+											<span className="text-gray-400">No ratings</span>
+										)}
+
+										{/* Show review form only for the selected site and if user hasn't reviewed */}
+										{reviewSite &&
+											reviewSite._id === site._id &&
+											userId &&
+											!hasUserReviewed(site._id, userId, siteReviews) && (
+												<Review
+													site={site}
+													onReviewSubmitted={async () => {
+														const res = await api.get(`/reviews/${site._id}`);
+														setSiteReviews((prev) => ({
+															...prev,
+															[site._id]: res.data,
+														}));
+														setReviewSite(null);
+													}}
+												/>
+											)}
+									</td>
+									<td className="py-2 px-4">
+										{/* Show Review button only if user hasn't reviewed */}
+										{userId &&
+											Array.isArray(siteReviews[site._id]) &&
+											!hasUserReviewed(site._id, userId, siteReviews) && (
+												<button
+													onClick={() => handleReviewClick(site)}
+													className="bg-yellow-500 text-white px-3 py-1 rounded"
+												>
+													Review
+												</button>
+											)}
+									</td>
+								</tr>
+							</React.Fragment>
 						))}
 					</tbody>
 				</table>

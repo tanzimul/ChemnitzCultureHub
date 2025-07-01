@@ -16,13 +16,6 @@ export default function Navbar() {
 
 					{/* Desktop Menu */}
 					<div className="hidden md:flex items-center space-x-6">
-						<Link
-							href="/samples"
-							className="text-gray-700 hover:text-primary-600 transition-colors"
-						>
-							Samples
-						</Link>
-
 						{user ? (
 							<>
 								<Link
@@ -54,7 +47,7 @@ export default function Navbar() {
 								</Link>
 								<Link
 									href="/auth/register"
-									className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors"
+									className="bg-primary-600 px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors"
 								>
 									Register
 								</Link>

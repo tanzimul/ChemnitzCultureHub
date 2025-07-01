@@ -3,8 +3,10 @@ import { useRouter } from "next/router";
 import Link from "next/link";
 import api from "@/utils/api";
 import Cookies from "js-cookie";
+import { useAuth } from "@/context/AuthContext";
 
 export default function Register() {
+	const { setUser } = useAuth();
 	const [formData, setFormData] = useState({
 		name: "",
 		email: "",
@@ -46,7 +48,7 @@ export default function Register() {
 			// Store token and user data
 			Cookies.set("token", token, { expires: 7 });
 			Cookies.set("user", JSON.stringify(user), { expires: 7 });
-
+			setUser(user);
 			// Redirect to dashboard
 			router.push("/dashboard");
 		} catch (error) {

@@ -10,8 +10,8 @@ const connectDB = require("./config/db");
 // Route imports
 const authRoutes = require("./routes/auth");
 const userRoutes = require("./routes/users");
-const sampleRoutes = require("./routes/samples");
 const culturalSitesRoutes = require("./routes/culturalSites");
+const reviewRoutes = require("./routes/review");
 const app = express();
 
 // Connect to MongoDB
@@ -45,9 +45,9 @@ app.use(express.urlencoded({ extended: true }));
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
-app.use("/api/samples", sampleRoutes);
 app.use("/api/cultural-sites", culturalSitesRoutes);
 app.use("/api/users/favorites", userRoutes);
+app.use("/api/reviews", reviewRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {
