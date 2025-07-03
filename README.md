@@ -1,166 +1,162 @@
-# 🌍 Chemnitz Culture Explorer
+# 🌍 ChemnitzCultureHub
 
-**Chemnitz Culture Explorer** is a full-stack interactive map application designed to help users discover cultural places in Chemnitz. Users can search for places, view details, get real-time routes from their current location, and bookmark favorites.
+**ChemnitzCultureHub** is a full-stack interactive web application that helps users discover, collect, and review cultural sites in Chemnitz. The app features a searchable map (OpenStreetMap + Leaflet), user accounts, favorites, reviews, and a playful "catch 'em all" inventory system.
 
 ---
 
 ## 🛠️ Tech Stack
 
-### 🔹 Frontend
+### Frontend
+
 - [Next.js](https://nextjs.org/)
-- [Leaflet.js](https://leafletjs.com/)
-- [React Context / Axios]
-- [Tailwind CSS](https://tailwindcss.com/) *(optional for styling)*
+- [React](https://react.dev/)
+- [Leaflet.js](https://leafletjs.com/) (interactive maps)
+- [Tailwind CSS](https://tailwindcss.com/) (styling)
+- [Axios](https://axios-http.com/) (API requests)
+- [js-cookie](https://github.com/js-cookie/js-cookie) (auth/session)
 
-### 🔹 Backend
+### Backend
+
+- [Node.js](https://nodejs.org/)
 - [Express.js](https://expressjs.com/)
-- [MongoDB + Mongoose](https://mongoosejs.com/)
+- [MongoDB](https://www.mongodb.com/) + [Mongoose](https://mongoosejs.com/)
 - [dotenv](https://www.npmjs.com/package/dotenv)
-
-### 🔹 Development Tooling
-- [npm-run-all](https://www.npmjs.com/package/npm-run-all)
+- [jsonwebtoken](https://www.npmjs.com/package/jsonwebtoken) (JWT auth)
+- [validator](https://www.npmjs.com/package/validator) (input validation)
 
 ---
 
 ## 📁 Project Structure
 
 ```
-chemnitz-culture-explorer/
-├── backend/               # Express + MongoDB API
+ChemnitzCultureHub/
+├── backend/                # Express + MongoDB API
+│   ├── controllers/
+│   ├── middleware/
 │   ├── models/
 │   ├── routes/
-│   ├── controllers/
 │   ├── app.js
-│   ├── .env
-│   └── package.json
-├── frontend/              # Next.js + Leaflet UI
-│   ├── pages/
+│   └── .env
+├── frontend/               # Next.js + Leaflet UI
 │   ├── components/
+│   ├── pages/
 │   ├── public/
-│   ├── .env.local
-│   └── package.json
-├── package.json           # Root scripts using npm-run-all
+│   ├── styles/
+│   └── .env.local
+├── package.json            # Root scripts using npm-run-all
 └── README.md
 ```
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Features
 
-### 📦 Prerequisites
+- **Map & List View:** Browse cultural sites on an interactive map and as a searchable/filterable list.
+- **Categories:** Theatres, museums, artworks, restaurants, and more.
+- **Details:** View rich details for each site, including address, website, and description.
+- **User Accounts:** Register, login, and manage your profile.
+- **Favorites:** Add/remove favorite sites.
+- **Visited Sites:** Track and collect sites you’ve visited (auto-detect nearby).
+- **Reviews:** Leave and read reviews for cultural sites.
+- **Inventory:** "Catch" cultural places and build your collection.
+- **Dashboard:** See your favorites, visited, and inventory.
+- **OpenStreetMap & Leaflet:** All map data and visualization.
 
-- Node.js (v16 or higher)
-- MongoDB (Local or [Atlas](https://www.mongodb.com/atlas))
+---
+
+## 📡 Data Source
+
+- **OpenStreetMap** (via Overpass API)
+- Categories: museums, artworks, theatres, restaurants, tourism spots
+
+---
+
+## 🛠️ API Endpoints (Backend)
+
+| Method | Route                             | Description                     | Auth |
+| ------ | --------------------------------- | ------------------------------- | ---- |
+| POST   | `/api/auth/register`              | Register user                   | ❌   |
+| POST   | `/api/auth/login`                 | Login user                      | ❌   |
+| GET    | `/api/user/me`                    | Get user info                   | ✅   |
+| PUT    | `/api/user`                       | Update user info                | ✅   |
+| GET    | `/api/culturalsites`              | List all cultural sites         | ✅   |
+| GET    | `/api/culturalsites/:id`          | Get details for a cultural site | ✅   |
+| POST   | `/api/culturalsites/:id/favorite` | Add to favorites                | ✅   |
+| DELETE | `/api/culturalsites/:id/favorite` | Remove from favorites           | ✅   |
+| POST   | `/api/culturalsites/:id/review`   | Add review                      | ✅   |
+| GET    | `/api/culturalsites/nearby`       | Get nearby sites by GPS         | ✅   |
+
+---
+
+## 🧭 How to Use
+
+1. **Register/Login:** Create an account or sign in.
+2. **Explore:** Browse the map or list to find cultural sites.
+3. **Details:** Click a marker or list item for more info.
+4. **Favorites:** Add sites to your favorites for quick access.
+5. **Catch & Review:** Mark sites as visited, leave reviews, and build your collection.
+6. **Dashboard:** Manage your favorites, visited, and profile.
+
+---
+
+## ⚙️ Getting Started
+
+### Prerequisites
+
+- Node.js (v20+)
+- MongoDB (Atlas or local)
 - Git
 
 ---
 
 ## 🔧 Installation & Setup
 
-### 1. Clone the Repository
+### Installation
 
 ```bash
-git clone https://github.com/your-username/chemnitz-culture-explorer.git
-cd chemnitz-culture-explorer
-```
-
-### 2. Install Dependencies
-
-From the **root folder**:
-
-```bash
+git clone https://github.com/your-username/ChemnitzCultureHub.git
+cd ChemnitzCultureHub
 npm install
+cd backend && npm install
+cd ../frontend && npm install
 ```
 
-This installs root-level dev tools and installs dependencies inside both `frontend/` and `backend/`.
+### Environment Configuration
+
+- **backend/.env**
+
+  ```
+  PORT=5000
+  MONGODB_URI=your_mongodb_connection_string
+  CLIENT_URL=http://localhost:3000
+  JWT_SECRET=your_jwt_secret
+  ```
+
+- **frontend/.env.local**
+  ```
+  NEXT_PUBLIC_API_URL=http://localhost:3000
+  ```
 
 ---
 
-### 3. Environment Configuration
+### Running the App
 
-#### 📍 Backend `.env` (`/backend/.env`)
-
-```env
-PORT=5000
-MONGODB_URI=mongodb://localhost:27017/chemnitz-culture
-```
-
-#### 🗺️ Frontend `.env.local` (`/frontend/.env.local`)
-
-```env
-NEXT_PUBLIC_API_URL=http://localhost:5000
-```
-
-*(Optional: If using Leaflet with Mapbox tiles, also add:)*
-
-```env
-NEXT_PUBLIC_MAPBOX_TOKEN=your_mapbox_access_token
-```
-
----
-
-### 4. Start the Project
-
-From the **root folder**, run:
+From the root folder:
 
 ```bash
-npm start
+npm run dev
 ```
 
 This uses `npm-run-all` to run both frontend (at `http://localhost:3000`) and backend (at `http://localhost:5000`) together.
 
----
-
-## 🧭 How to Use the App
-
-1. **Search**: Use the search bar to find cultural landmarks in Chemnitz.
-2. **Map Interaction**: Click any marker to view details of a place.
-3. **Bookmark**: Click the star icon to save it to your favorites.
-4. **Routing**: Allow location access → click “Get Route” to see navigation from your current location.
-5. **Favorites**: View all bookmarked places from your saved list.
-
----
-
-## 📂 Example API Routes (Backend)
-
-| Method | Endpoint            | Description                    |
-|--------|---------------------|--------------------------------|
-| GET    | `/api/places`       | Fetch all cultural places      |
-| POST   | `/api/places`       | Add a new cultural place       |
-| GET    | `/api/places/:id`   | Fetch a single place detail    |
-| POST   | `/api/bookmarks`    | Add bookmark for user/session  |
-| GET    | `/api/bookmarks`    | Retrieve all user bookmarks    |
-
----
-
-## 📜 Scripts
-
-### 🔹 Root `/package.json`
-
-```json
-{
-  "name": "chemnitz-culture-explorer",
-  "scripts": {
-    "start": "npm-run-all --parallel start:backend start:frontend",
-    "start:backend": "cd backend && npm start",
-    "start:frontend": "cd frontend && npm run dev",
-    "install:all": "npm-run-all install:backend install:frontend",
-    "install:backend": "cd backend && npm install",
-    "install:frontend": "cd frontend && npm install"
-  },
-  "devDependencies": {
-    "npm-run-all": "^4.1.5"
-  }
-}
-```
-
-> After cloning, simply run `npm install` to install all dependencies and `npm start` to run both servers concurrently.
+Or run backend and frontend separately in their folders.
 
 ---
 
 ## 🛡️ Permissions
 
-- The app requests **location access** to calculate routes.
+- The app requests **location access** to calculate user current location.
+- And for future uses of routing.
 - No user data is stored permanently unless authentication is added.
 
 ---
@@ -170,7 +166,7 @@ This uses `npm-run-all` to run both frontend (at `http://localhost:3000`) and ba
 **Tanzimul**  
 Student at TU Chemnitz  
 Course: Automotive Software Engineering  
-📧 your-email@example.com
+📧 mohammad-tanzimul.alam@s2021.tu-chemnitz.de
 
 ---
 
