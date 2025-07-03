@@ -6,7 +6,11 @@ const {
 	getFavoriteLocations,
 	updateLocation,
 	getMe,
+	deleteMe,
+	getUserStats,
 	collectAndGetVisitedSites,
+	catchSite,
+	tradeSite,
 } = require("../controllers/userController");
 const auth = require("../middleware/auth");
 
@@ -42,9 +46,29 @@ router.put("/location", auth, updateLocation);
 // @access  Private
 router.get("/me", auth, getMe);
 
+// @route   DELETE /api/users/me
+// @desc    Delete user profile
+// @access  Private
+router.delete("/me", auth, deleteMe);
+
+// @route   GET /api/users/me/stats
+// @desc    Get user's stats (favorites, visited, inventory)
+// @access  Private
+router.get("/me/stats", auth, getUserStats);
+
 // @route   GET /api/users/visited-sites
 // @desc    Get user's visited cultural sites
 // @access  Private
 router.get("/visited-sites", auth, collectAndGetVisitedSites);
+
+// @route   POST /api/users/catch-site
+// @desc    Catch a cultural site
+// @access  Private
+router.post("/catch-site", auth, catchSite);
+
+// @route   POST /api/users/trade-site
+// @desc    Trade a cultural site
+// @access  Private
+router.post("/trade-site", auth, tradeSite);
 
 module.exports = router;

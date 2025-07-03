@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
+const validator = require("validator");
 
 const userSchema = new mongoose.Schema(
 	{
@@ -11,13 +12,12 @@ const userSchema = new mongoose.Schema(
 		},
 		email: {
 			type: String,
-			required: [true, "Email is required"],
+			required: true,
 			unique: true,
-			lowercase: true,
-			match: [
-				/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
-				"Please enter a valid email",
-			],
+			validate: {
+				validator: validator.isEmail,
+				message: "Please enter a valid email",
+			},
 		},
 		password: {
 			type: String,
@@ -41,30 +41,28 @@ const userSchema = new mongoose.Schema(
 				ref: "CulturalSite",
 			},
 		],
-		// favorites: [
-		// 	{
-		// 		_id: {
-		// 			type: mongoose.Schema.Types.ObjectId,
-		// 			auto: true,
-		// 		},
-		// 		name: String,
-		// 		category: String,
-		// 		location: Object, // GeoJSON or whatever structure you use
-		// 		address: String,
-		// 		contact: String,
-		// 		website: String,
-		// 		phone: String,
-		// 		description: String,
-		// 		addedAt: {
-		// 			type: Date,
-		// 			default: Date.now,
-		// 		},
-		// 	},
-		// ],
 		visitedSites: [
 			{
 				type: mongoose.Schema.Types.ObjectId,
 				ref: "CulturalSite",
+			},
+		],
+		inventory: [
+			{
+				site: {
+					type: mongoose.Schema.Types.ObjectId,
+					ref: "CulturalSite",
+					required: true,
+				},
+				count: { type: Number, default: 1 },
+				caughtAt: { type: Date, default: Date.now },
+				tradeHistory: [
+					{
+						to: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+						date: { type: Date, default: Date.now },
+						type: { type: String, enum: ["sent", "received"] },
+					},
+				],
 			},
 		],
 	},

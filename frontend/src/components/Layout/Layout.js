@@ -43,7 +43,7 @@ export default function Layout({ children }) {
 		<div className="min-h-screen bg-gray-50">
 			{/* <Navbar user={user} logout={logout} /> */}
 			<Navbar />
-			<main className="container mx-auto px-4 py-8">{children}</main>
+			<main className="w-full h-full">{children}</main>
 		</div>
 	);
 }

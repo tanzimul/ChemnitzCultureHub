@@ -48,6 +48,7 @@ export default function CulturalMap({
 	keyword,
 	onAddFavorite,
 	userLocation,
+	onCatchSuccess,
 }) {
 	const [sites, setSites] = useState([]);
 	const [error, setError] = useState("");
@@ -77,6 +78,18 @@ export default function CulturalMap({
 		fetchSites();
 	}, [token]);
 
+	const handleCatch = async (siteId) => {
+		try {
+			const res = await api.post("/users/catch-site", { siteId });
+			alert(res.data.message || "Caught!");
+			if (onCatchSuccess) onCatchSuccess();
+		} catch (err) {
+			alert(
+				err.response?.data?.message || "Failed to catch site. Please try again."
+			);
+		}
+	};
+
 	const filteredSites = sites.filter((site) => {
 		if (!site || !site.name) return false;
 
@@ -104,7 +117,7 @@ export default function CulturalMap({
 			<MapContainer
 				center={[50.83, 12.92]}
 				zoom={13}
-				style={{ height: "700px", width: "100%" }}
+				style={{ height: "100%", width: "100%" }}
 			>
 				<TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 				{/* All cultural site markers */}
@@ -119,30 +132,33 @@ export default function CulturalMap({
 							>
 								<Popup>
 									<div>
-										<strong>{site.name}</strong>
+										<strong className="text-lg text-primary-700">
+											{site.name}
+										</strong>
 										<br />
-										<em>{site.category}</em>
+										<em className="text-sm text-gray-500">{site.category}</em>
 										<br />
 										{site.properties?.address && (
-											<div>📍 {site.properties.address}</div>
+											<div className="mb-1">📍 {site.properties.address}</div>
 										)}
 										{site.properties?.website && (
-											<div>
+											<div className="mb-1">
 												🔗{" "}
 												<a
 													href={site.properties.website}
 													target="_blank"
 													rel="noopener noreferrer"
+													className="text-blue-600 underline hover:text-blue-800"
 												>
 													Website
 												</a>
 											</div>
 										)}
 										{site.properties?.phone && (
-											<div>📞 {site.properties.phone}</div>
+											<div className="mb-1">📞 {site.properties.phone}</div>
 										)}
-										<div>{site.description}</div>
-										<div style={{ marginTop: "0.5em" }}>
+										<div className="mb-2 text-gray-700">{site.description}</div>
+										<div className="mb-2">
 											{site.properties &&
 												Object.entries(site.properties)
 													.filter(
@@ -155,27 +171,25 @@ export default function CulturalMap({
 															key !== "image"
 													)
 													.map(([key, value]) => (
-														<div key={key}>
+														<div key={key} className="text-xs text-gray-600">
 															<strong>{key}:</strong> {String(value)}
 														</div>
 													))}
 										</div>
 										{onAddFavorite && (
 											<button
-												style={{
-													marginTop: "1em",
-													background: "#22c55e",
-													color: "white",
-													padding: "0.5em 1em",
-													borderRadius: "4px",
-													border: "none",
-													cursor: "pointer",
-												}}
+												className="mt-2 bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-1.5 rounded shadow transition font-semibold"
 												onClick={() => onAddFavorite(site)}
 											>
-												Add to Favorites
+												★ Add to Favorites
 											</button>
 										)}
+										<button
+											onClick={() => handleCatch(site._id)}
+											className="bg-cyan-900 hover:bg-cyan-1000 text-white px-4 py-1.5 rounded shadow mt-3 font-semibold transition ml-2"
+										>
+											Catch
+										</button>
 									</div>
 								</Popup>
 							</Marker>

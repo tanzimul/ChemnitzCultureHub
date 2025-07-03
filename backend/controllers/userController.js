@@ -1,5 +1,6 @@
 const User = require("../models/User");
 const CulturalSite = require("../models/CulturalSite");
+const Review = require("../models/Review");
 
 // Update User Profile
 exports.updateProfile = async (req, res) => {
@@ -132,7 +133,9 @@ exports.updateLocation = async (req, res) => {
 // Get User Profile
 exports.getMe = async (req, res) => {
 	try {
-		const user = await User.findById(req.user._id).select("-password");
+		const user = await User.findById(req.user._id)
+			.select("-password")
+			.populate("inventory.site"); // <-- populate site details
 		if (!user) {
 			return res.status(404).json({ message: "User not found" });
 		}
@@ -140,6 +143,56 @@ exports.getMe = async (req, res) => {
 	} catch (error) {
 		console.error("Get current user error:", error);
 		res.status(500).json({ message: "Server error" });
+	}
+};
+
+// Delete User Profile
+exports.deleteMe = async (req, res) => {
+	try {
+		const userId = req.user._id;
+
+		// Delete user's reviews
+		await Review.deleteMany({ user: userId });
+
+		// Remove user from other users' favorites
+		await User.updateMany(
+			{ favorites: userId },
+			{ $pull: { favorites: userId } }
+		);
+
+		// remove user from other users' trade histories
+		await User.updateMany(
+			{ "inventory.tradeHistory.to": userId },
+			{ $pull: { "inventory.$[].tradeHistory": { to: userId } } }
+		);
+
+		// Delete the user
+		await User.findByIdAndDelete(userId);
+
+		res.json({ message: "User and all related data deleted successfully" });
+	} catch (err) {
+		console.error("Delete user error:", err);
+		res.status(500).json({ message: "Failed to delete user" });
+	}
+};
+
+// Get User Stats (Favorites, Visited, Inventory)
+exports.getUserStats = async (req, res) => {
+	try {
+		const user = await User.findById(req.user._id)
+			.populate("favorites")
+			.populate("visitedSites")
+			.populate("inventory.site");
+
+		if (!user) return res.status(404).json({ message: "User not found" });
+
+		res.json({
+			favorites: user.favorites ? user.favorites.length : 0,
+			visited: user.visitedSites ? user.visitedSites.length : 0,
+			inventory: user.inventory ? user.inventory.length : 0,
+		});
+	} catch (err) {
+		res.status(500).json({ message: "Failed to fetch stats" });
 	}
 };
 
@@ -182,5 +235,73 @@ exports.collectAndGetVisitedSites = async (req, res) => {
 	} catch (error) {
 		console.error("Collect/Get visited sites error:", error);
 		res.status(500).json({ message: "Server error" });
+	}
+};
+
+// Catch a Cultural Site
+exports.catchSite = async (req, res) => {
+	try {
+		const user = await User.findById(req.user._id);
+		const { siteId } = req.body;
+
+		let entry = user.inventory.find((c) => c.site.toString() === siteId);
+		if (entry) {
+			entry.count += 1;
+		} else {
+			user.inventory.push({ site: siteId, count: 1 });
+		}
+		await user.save();
+		await user.populate("inventory.site");
+		res.json({ message: "Site caught!", inventory: user.inventory });
+	} catch (error) {
+		res
+			.status(500)
+			.json({ message: "Error catching site", error: error.message });
+	}
+};
+
+// Trade a Cultural Site
+exports.tradeSite = async (req, res) => {
+	try {
+		const { toUserId, siteId } = req.body;
+		const fromUser = await User.findById(req.user._id);
+		const toUser = await User.findById(toUserId);
+
+		// Remove from sender
+		const fromEntry = fromUser.inventory.find(
+			(c) => c.site.toString() === siteId
+		);
+		if (!fromEntry || fromEntry.count < 1) {
+			return res
+				.status(400)
+				.json({ message: "You don't have this site to trade." });
+		}
+		fromEntry.count -= 1;
+		fromEntry.tradeHistory.push({ to: toUserId, type: "sent" });
+		if (fromEntry.count === 0) {
+			fromUser.inventory = fromUser.inventory.filter(
+				(c) => c.site.toString() !== siteId
+			);
+		}
+
+		// Add to receiver
+		let toEntry = toUser.inventory.find((c) => c.site.toString() === siteId);
+		if (toEntry) {
+			toEntry.count += 1;
+			toEntry.tradeHistory.push({ to: fromUser._id, type: "received" });
+		} else {
+			toUser.inventory.push({
+				site: siteId,
+				count: 1,
+				tradeHistory: [{ to: fromUser._id, type: "received" }],
+			});
+		}
+
+		await fromUser.save();
+		await toUser.save();
+
+		res.json({ message: "Trade successful!" });
+	} catch (error) {
+		res.status(500).json({ message: "Trade failed", error: error.message });
 	}
 };

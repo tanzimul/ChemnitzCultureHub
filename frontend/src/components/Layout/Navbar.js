@@ -7,10 +7,10 @@ export default function Navbar() {
 	const { user, logout } = useAuth();
 
 	return (
-		<nav className="bg-white shadow-lg text-black">
-			<div className="container mx-auto px-4">
+		<nav className="bg-gray-900 shadow-lg text-white">
+			<div className="w-full h-full max-w-0xl mx-auto px-4 sm:px-6 lg:px-8">
 				<div className="flex justify-between items-center py-4">
-					<Link href="/" className="text-2xl font-bold text-primary-600">
+					<Link href="/" className="text-2xl font-bold text-primary-300">
 						ChemnitzCultureHub
 					</Link>
 
@@ -20,19 +20,19 @@ export default function Navbar() {
 							<>
 								<Link
 									href="/dashboard"
-									className="text-gray-700 hover:text-primary-600 transition-colors"
+									className="text-gray-200 hover:text-primary-300 transition-colors"
 								>
 									Dashboard
 								</Link>
 								<Link
 									href="/profile"
-									className="text-gray-700 hover:text-primary-600 transition-colors"
+									className="text-gray-200 hover:text-primary-300 transition-colors"
 								>
 									Profile
 								</Link>
 								<button
 									onClick={logout}
-									className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors"
+									className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
 								>
 									Logout
 								</button>
@@ -41,13 +41,13 @@ export default function Navbar() {
 							<>
 								<Link
 									href="/auth/login"
-									className="text-gray-700 hover:text-primary-600 transition-colors"
+									className="text-gray-200 hover:text-primary-300 transition-colors"
 								>
 									Login
 								</Link>
 								<Link
 									href="/auth/register"
-									className="bg-primary-600 px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors"
+									className="bg-primary-700 text-white px-4 py-2 rounded-lg hover:bg-primary-600 transition-colors"
 								>
 									Register
 								</Link>
@@ -61,41 +61,34 @@ export default function Navbar() {
 						className="md:hidden p-2"
 					>
 						<div className="w-6 h-6 flex flex-col justify-around">
-							<div className="w-full h-0.5 bg-gray-700"></div>
-							<div className="w-full h-0.5 bg-gray-700"></div>
-							<div className="w-full h-0.5 bg-gray-700"></div>
+							<div className="w-full h-0.5 bg-gray-200"></div>
+							<div className="w-full h-0.5 bg-gray-200"></div>
+							<div className="w-full h-0.5 bg-gray-200"></div>
 						</div>
 					</button>
 				</div>
 
 				{/* Mobile Menu */}
 				{isMenuOpen && (
-					<div className="md:hidden py-4 border-t border-gray-200">
+					<div className="md:hidden py-4 border-t border-gray-700 bg-gray-900">
 						<div className="flex flex-col space-y-4">
-							<Link
-								href="/samples"
-								className="text-gray-700 hover:text-primary-600 transition-colors"
-							>
-								Samples
-							</Link>
-
 							{user ? (
 								<>
 									<Link
 										href="/dashboard"
-										className="text-gray-700 hover:text-primary-600 transition-colors"
+										className="text-gray-200 hover:text-primary-300 transition-colors"
 									>
 										Dashboard
 									</Link>
 									<Link
 										href="/profile"
-										className="text-gray-700 hover:text-primary-600 transition-colors"
+										className="text-gray-200 hover:text-primary-300 transition-colors"
 									>
 										Profile
 									</Link>
 									<button
 										onClick={logout}
-										className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors text-left"
+										className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors text-left"
 									>
 										Logout
 									</button>
@@ -104,13 +97,13 @@ export default function Navbar() {
 								<>
 									<Link
 										href="/auth/login"
-										className="text-gray-700 hover:text-primary-600 transition-colors"
+										className="text-gray-200 hover:text-primary-300 transition-colors"
 									>
 										Login
 									</Link>
 									<Link
 										href="/auth/register"
-										className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors text-center"
+										className="bg-primary-700 text-white px-4 py-2 rounded-lg hover:bg-primary-600 transition-colors text-center"
 									>
 										Register
 									</Link>

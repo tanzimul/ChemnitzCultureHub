@@ -8,6 +8,8 @@ import toast from "react-hot-toast";
 import Review from "@/components/Review/Review";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/router";
+import InventoryList from "@/components/CulturalCollection/InventoryList";
+import TradeForm from "@/components/CulturalCollection/TradeForm";
 
 // Dynamically import the map component (client-side only)
 const CulturalMap = dynamic(
@@ -64,6 +66,10 @@ export default function DashboardPage() {
 	const [reviewSite, setReviewSite] = useState(null);
 	const [siteReviews, setSiteReviews] = useState({});
 	const [reviewsLoading, setReviewsLoading] = useState(false);
+	const [inventory, setInventory] = useState([]);
+	const [showInventory, setShowInventory] = useState(false);
+	const [showAllFavorites, setShowAllFavorites] = useState(false);
+	const [showAllVisited, setShowAllVisited] = useState(false);
 
 	const FAVS_PER_PAGE = 10;
 	const VISITED_PER_PAGE = 10;
@@ -258,12 +264,21 @@ export default function DashboardPage() {
 		}
 	};
 
+	const fetchInventory = async () => {
+		try {
+			const res = await api.get("/users/me");
+			setInventory(res.data.inventory || []);
+		} catch (err) {
+			console.error("Error fetching inventory:", err);
+		}
+	};
+
 	// Show loading while checking auth
 	if (user === null) return <div>Loading...</div>;
 	if (!user) return null;
 
 	return (
-		<div className="p-4">
+		<div className="pt-0 h-[calc(100vh-64px)]">
 			<Toaster
 				position="top-right"
 				containerClassName="mt-16"
@@ -271,274 +286,473 @@ export default function DashboardPage() {
 					style: { marginTop: "4rem" },
 				}}
 			/>
-			<h1 className="text-2xl font-bold mb-4">Dashboard</h1>
-
-			{/* Search and filter controls */}
-			<div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
-				<div className="relative w-full sm:w-1/2">
-					<input
-						type="text"
-						placeholder="Search cultural sites..."
-						className="w-full bg-white border border-gray-300 text-sm text-gray-700 rounded-xl py-2.5 pl-4 pr-12 shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition"
-						onChange={(e) => setKeyword(e.target.value)}
-					/>
-					<div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-						🔍
-					</div>
-				</div>
-				<div className="w-full sm:w-1/3">
-					<select
-						onChange={(e) => setCategoryFilter(e.target.value)}
-						value={categoryFilter}
-						className="w-full bg-white border border-gray-300 text-sm text-gray-700 rounded-xl py-2.5 px-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition"
-					>
-						<option value="">All Categories</option>
-						{allCategories.map((cat) => (
-							<option key={cat} value={cat}>
-								{capitalize(cat)}
-							</option>
-						))}
-					</select>
-				</div>
-			</div>
-
-			{/* Map */}
-			<CulturalMap
-				token={token}
-				categoryFilter={categoryFilter}
-				keyword={keyword}
-				onAddFavorite={addFavorite}
-				userLocation={userLocation}
-			/>
-
-			<button
-				onClick={handleGetLocation}
-				className="bg-blue-600 text-white px-4 py-2 rounded-md mt-4 hover:bg-blue-700 transition"
-			>
-				Save My Current Location
-			</button>
-
-			{/* Favorites Table */}
-			<h2 className="text-xl font-semibold mt-6">My Favorites</h2>
-			<div className="overflow-x-auto rounded-lg shadow mb-8">
-				<table className="min-w-full bg-white border border-gray-200">
-					<thead className="bg-gray-700 text-white">
-						<tr>
-							<th className="py-3 px-4 text-left">#</th>
-							<th className="py-3 px-4 text-left">Name</th>
-							<th className="py-3 px-4 text-left">Category</th>
-							<th className="py-3 px-4 text-left">Website</th>
-							<th className="py-3 px-4 text-left">Phone</th>
-							<th className="py-3 px-4 text-left">Description</th>
-							<th className="py-3 px-4 text-left">Location</th>
-							<th className="py-3 px-4 text-left">Action</th>
-						</tr>
-					</thead>
-					<tbody>
-						{paginatedFavorites
-							.filter((site) => site && site.name)
-							.map((site, idx) => (
-								<tr
-									key={site._id}
-									className={idx % 2 === 0 ? "bg-gray-50" : "bg-white"}
+			<div className="flex h-full">
+				{/* Sidebar */}
+				<aside className="relative z-10 w-full lg:w-[40%] bg-white border-r border-gray-200 flex-shrink-0 flex flex-col h-screen max-h-screen overflow-y-auto shadow-lg">
+					<div className="px-6 py-4 border-b border-gray-100">
+						<h1 className="text-2xl font-bold mb-2 px-2">Dashboard</h1>
+						<div className="flex flex-col gap-3">
+							<div className="flex gap-2">
+								<input
+									type="text"
+									placeholder="Search cultural sites..."
+									className="w-full bg-white border border-gray-300 text-sm text-gray-700 rounded-xl py-2.5 pl-4 pr-10 shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition"
+									value={keyword}
+									onChange={(e) => setKeyword(e.target.value)}
+								/>
+								<button
+									onClick={() => {
+										/* Optionally trigger search/filter logic here */
+									}}
+									className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-3 flex items-center justify-center transition"
+									aria-label="Search"
 								>
-									<td className="py-2 px-4 font-medium">
-										{favStart + idx + 1}
-									</td>
-									<td className="py-2 px-4">{site.name}</td>
-									<td className="py-2 px-4">
-										{site.category || site.properties?.category}
-									</td>
-									<td className="py-2 px-4">
-										{site.website || site.properties?.website ? (
-											<a
-												href={site.website || site.properties?.website}
-												target="_blank"
-												rel="noopener noreferrer"
-												className="text-blue-600 underline"
-											>
-												{site.website || site.properties?.website}
-											</a>
-										) : (
-											"-"
-										)}
-									</td>
-									<td className="py-2 px-4">
-										{site.phone || site.properties?.phone || "-"}
-									</td>
-									<td className="py-2 px-4">{site.description}</td>
-									<td className="py-2 px-4 text-xs">
-										{site.location && site.location.coordinates
-											? `${site.location.coordinates[1]}, ${site.location.coordinates[0]}`
-											: "-"}
-									</td>
-									<td className="py-2 px-4">
-										<button
-											onClick={() => removeFavorite(site._id)}
-											className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded transition"
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										className="h-5 w-5"
+										fill="none"
+										viewBox="0 0 24 24"
+										stroke="currentColor"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M21 21l-4.35-4.35M17 11A6 6 0 105 11a6 6 0 0012 0z"
+										/>
+									</svg>
+								</button>
+							</div>
+							<div className="flex gap-2">
+								<select
+									onChange={(e) => setCategoryFilter(e.target.value)}
+									value={categoryFilter}
+									className="w-full bg-white border border-gray-300 text-sm text-gray-700 rounded-xl py-2.5 px-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition"
+								>
+									<option value="">All Categories</option>
+									{allCategories.map((cat) => (
+										<option key={cat} value={cat}>
+											{capitalize(cat)}
+										</option>
+									))}
+								</select>
+								<button
+									onClick={() => {
+										setKeyword("");
+										setCategoryFilter("");
+									}}
+									className="bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl px-3 py-2 font-medium transition"
+									aria-label="Clear all filters"
+								>
+									Clear
+								</button>
+							</div>
+							<div className="flex gap-3">
+								<button
+									onClick={handleGetLocation}
+									className="flex items-center justify-center gap-2 bg-gradient-to-r from-blue-500 to-blue-700 text-white px-4 py-2 rounded-xl font-semibold shadow hover:from-blue-600 hover:to-blue-800 transition"
+								>
+									<span>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											className="h-5 w-5 inline-block mr-1"
+											fill="none"
+											viewBox="0 0 24 24"
+											stroke="currentColor"
 										>
-											Remove
-										</button>
-									</td>
-								</tr>
-							))}
-					</tbody>
-				</table>
-				{/* Pagination Controls */}
-				<div className="flex justify-end items-center gap-2 mt-4 mb-4 px-4">
-					<button
-						onClick={() => setFavPage((p) => Math.max(1, p - 1))}
-						disabled={favPage === 1}
-						className="px-3 py-1 rounded bg-gray-400 text-black-700 hover:bg-gray-200 disabled:opacity-50 transition"
-					>
-						Prev
-					</button>
-					{Array.from(
-						{ length: Math.ceil(favorites.length / FAVS_PER_PAGE) },
-						(_, i) => (
-							<button
-								key={i}
-								onClick={() => setFavPage(i + 1)}
-								className={`px-3 py-1 rounded ${
-									favPage === i + 1
-										? "bg-gray-600 text-white"
-										: "bg-gray-50 text-black-700 hover:bg-gray-200"
-								} transition`}
-							>
-								{i + 1}
-							</button>
-						)
-					)}
-					<button
-						onClick={() =>
-							setFavPage((p) =>
-								p < Math.ceil(favorites.length / FAVS_PER_PAGE) ? p + 1 : p
-							)
-						}
-						disabled={favPage >= Math.ceil(favorites.length / FAVS_PER_PAGE)}
-						className="px-3 py-1 rounded bg-gray-400 text-black-700 hover:bg-gray-200 disabled:opacity-50 transition"
-					>
-						Next
-					</button>
-				</div>
-			</div>
-
-			{/* Visited Sites Table */}
-			<h2 className="text-xl font-semibold mt-6">Visited Sites Near You</h2>
-			<div className="overflow-x-auto rounded-lg shadow">
-				<table className="min-w-full bg-white border border-gray-200">
-					<thead className="bg-green-600 text-white">
-						<tr>
-							<th className="py-3 px-4 text-left">#</th>
-							<th className="py-3 px-4 text-left">Name</th>
-							<th className="py-3 px-4 text-left">Category</th>
-							<th className="py-3 px-4 text-left">Rating</th>
-							<th className="py-3 px-4 text-left">Action</th>
-						</tr>
-					</thead>
-					<tbody>
-						{paginatedVisited.map((site, idx) => (
-							<React.Fragment key={site._id}>
-								<tr className={idx % 2 === 0 ? "bg-gray-50" : "bg-white"}>
-									<td className="py-2 px-4 font-medium">
-										{visitedStart + idx + 1}
-									</td>
-									<td className="py-2 px-4">{site.name}</td>
-									<td className="py-2 px-4">{site.category}</td>
-									<td className="py-2 px-4">
-										{/* Always show average rating */}
-										{siteReviews[site._id] &&
-										siteReviews[site._id].length > 0 ? (
-											<span>
-												{(
-													siteReviews[site._id].reduce(
-														(sum, r) => sum + r.rating,
-														0
-													) / siteReviews[site._id].length
-												).toFixed(1)}{" "}
-												<span className="text-yellow-500">★</span>
-											</span>
-										) : (
-											<span className="text-gray-400">No ratings</span>
-										)}
-
-										{/* Show review form only for the selected site and if user hasn't reviewed */}
-										{reviewSite &&
-											reviewSite._id === site._id &&
-											userId &&
-											!hasUserReviewed(site._id, userId, siteReviews) && (
-												<Review
-													site={site}
-													onReviewSubmitted={async () => {
-														const res = await api.get(`/reviews/${site._id}`);
-														setSiteReviews((prev) => ({
-															...prev,
-															[site._id]: res.data,
-														}));
-														setReviewSite(null);
-													}}
+											<path
+												strokeLinecap="round"
+												strokeLinejoin="round"
+												strokeWidth={2}
+												d="M12 3v2m0 14v2m9-9h-2M5 12H3m15.364-6.364l-1.414 1.414M6.343 17.657l-1.414 1.414M17.657 17.657l-1.414-1.414M6.343 6.343L4.929 4.929M12 8a4 4 0 100 8 4 4 0 000-8z"
+											/>
+										</svg>
+									</span>
+									Save My Current Location
+								</button>
+								{userId && (
+									<button
+										onClick={() => {
+											navigator.clipboard.writeText(userId);
+											toast.success(
+												"Your User ID has been copied to the clipboard!"
+											);
+										}}
+										className="flex items-center justify-center gap-2 bg-gray-100 border border-gray-300 text-gray-700 px-4 py-2 rounded-xl font-semibold shadow hover:bg-gray-200 transition"
+									>
+										<span>
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												className="h-5 w-5 inline-block mr-1"
+												fill="none"
+												viewBox="0 0 24 24"
+												stroke="currentColor"
+											>
+												<path
+													strokeLinecap="round"
+													strokeLinejoin="round"
+													strokeWidth={2}
+													d="M8 16h8M8 12h8m-7 8h6a2 2 0 002-2V6a2 2 0 00-2-2H9a2 2 0 00-2 2v12a2 2 0 002 2z"
 												/>
-											)}
-									</td>
-									<td className="py-2 px-4">
-										{/* Show Review button only if user hasn't reviewed */}
-										{userId &&
-											Array.isArray(siteReviews[site._id]) &&
-											!hasUserReviewed(site._id, userId, siteReviews) && (
-												<button
-													onClick={() => handleReviewClick(site)}
-													className="bg-yellow-500 text-white px-3 py-1 rounded"
-												>
-													Review
-												</button>
-											)}
-									</td>
-								</tr>
-							</React.Fragment>
-						))}
-					</tbody>
-				</table>
-				{/* Pagination Controls */}
-				<div className="flex justify-end items-center gap-2 mt-4 mb-4 px-4">
-					<button
-						onClick={() => setVisitedPage((p) => Math.max(1, p - 1))}
-						disabled={visitedPage === 1}
-						className="px-3 py-1 rounded bg-green-100 text-green-700 hover:bg-green-200 disabled:opacity-50 transition"
-					>
-						Prev
-					</button>
-					{Array.from(
-						{ length: Math.ceil(visitedSites.length / VISITED_PER_PAGE) },
-						(_, i) => (
+											</svg>
+										</span>
+										Copy My User ID
+									</button>
+								)}
+							</div>
+						</div>
+					</div>
+					<div className="flex-1 overflow-y-auto px-6 py-4">
+						<div className="mb-4">
 							<button
-								key={i}
-								onClick={() => setVisitedPage(i + 1)}
-								className={`px-3 py-1 rounded ${
-									visitedPage === i + 1
-										? "bg-green-600 text-white"
-										: "bg-green-50 text-green-700 hover:bg-green-200"
-								} transition`}
+								onClick={() => setShowInventory((v) => !v)}
+								className="flex items-center gap-2 text-primary-700 font-semibold mb-2 focus:outline-none"
 							>
-								{i + 1}
+								<span>{showInventory ? "▼" : "►"}</span>
+								My Inventory
 							</button>
-						)
-					)}
-					<button
-						onClick={() =>
-							setVisitedPage((p) =>
-								p < Math.ceil(visitedSites.length / VISITED_PER_PAGE)
-									? p + 1
-									: p
-							)
-						}
-						disabled={
-							visitedPage >= Math.ceil(visitedSites.length / VISITED_PER_PAGE)
-						}
-						className="px-3 py-1 rounded bg-green-100 text-green-700 hover:bg-green-200 disabled:opacity-50 transition"
-					>
-						Next
-					</button>
-				</div>
+							{showInventory && <InventoryList onLoaded={setInventory} />}
+						</div>
+
+						<TradeForm inventory={inventory} />
+
+						{/* My Favorites Section */}
+						<div className="mt-6">
+							<h2 className="text-xl font-semibold mb-2">My Favorites</h2>
+							<div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-2">
+								{(showAllFavorites
+									? paginatedFavorites
+									: paginatedFavorites.slice(0, 4)
+								)
+									.filter((site) => site && site.name)
+									.map((site, idx) => (
+										<div
+											key={site._id}
+											className="bg-white rounded-xl shadow-md border border-gray-100 p-4 flex flex-col gap-2 hover:shadow-lg transition"
+										>
+											<div className="flex justify-between items-center">
+												<div className="font-bold text-lg text-primary-700">
+													{site.name}
+												</div>
+												<button
+													onClick={() => removeFavorite(site._id)}
+													className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded transition text-xs"
+													aria-label="Remove from favorites"
+												>
+													Remove
+												</button>
+											</div>
+											<div className="text-sm text-gray-600">
+												Category:{" "}
+												<span className="font-medium">
+													{site.category || site.properties?.category}
+												</span>
+											</div>
+											<div className="text-xs text-gray-500 break-all">
+												Website:{" "}
+												{site.website || site.properties?.website ? (
+													<a
+														href={site.website || site.properties?.website}
+														target="_blank"
+														rel="noopener noreferrer"
+														className="text-blue-600 underline"
+													>
+														{site.website || site.properties?.website}
+													</a>
+												) : (
+													<span>-</span>
+												)}
+											</div>
+											<div className="text-xs text-gray-500">
+												Phone: {site.phone || site.properties?.phone || "-"}
+											</div>
+											<div className="text-xs text-gray-500">
+												Description: {site.description || "-"}
+											</div>
+											<div className="text-xs text-gray-400">
+												Location:{" "}
+												{site.location && site.location.coordinates
+													? `${site.location.coordinates[1]}, ${site.location.coordinates[0]}`
+													: "-"}
+											</div>
+										</div>
+									))}
+							</div>
+							{paginatedFavorites.length > 4 && (
+								<div className="flex justify-center my-5">
+									<button
+										onClick={() => setShowAllFavorites((v) => !v)}
+										className="flex items-center gap-1 px-4 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium shadow transition"
+										aria-label={
+											showAllFavorites
+												? "Show less favorites"
+												: "See all favorites"
+										}
+									>
+										{showAllFavorites ? (
+											<>
+												<span>Show Less</span>
+												<svg
+													className="w-4 h-4"
+													fill="none"
+													stroke="currentColor"
+													strokeWidth={2}
+													viewBox="0 0 24 24"
+												>
+													<path
+														strokeLinecap="round"
+														strokeLinejoin="round"
+														d="M19 15l-7-7-7 7"
+													/>
+												</svg>
+											</>
+										) : (
+											<>
+												<span>See All</span>
+												<svg
+													className="w-4 h-4"
+													fill="none"
+													stroke="currentColor"
+													strokeWidth={2}
+													viewBox="0 0 24 24"
+												>
+													<path
+														strokeLinecap="round"
+														strokeLinejoin="round"
+														d="M5 9l7 7 7-7"
+													/>
+												</svg>
+											</>
+										)}
+									</button>
+								</div>
+							)}
+							{/* Pagination Controls */}
+							{showAllFavorites && (
+								<div className="flex justify-end items-center gap-2 mt-2 mb-2 px-2">
+									<button
+										onClick={() => setFavPage((p) => Math.max(1, p - 1))}
+										disabled={favPage === 1}
+										className="px-2 py-1 rounded bg-gray-400 text-black-700 hover:bg-gray-200 disabled:opacity-50 transition"
+									>
+										Prev
+									</button>
+									{Array.from(
+										{ length: Math.ceil(favorites.length / FAVS_PER_PAGE) },
+										(_, i) => (
+											<button
+												key={i}
+												onClick={() => setFavPage(i + 1)}
+												className={`px-2 py-1 rounded ${
+													favPage === i + 1
+														? "bg-gray-600 text-white"
+														: "bg-gray-50 text-black-700 hover:bg-gray-200"
+												} transition`}
+											>
+												{i + 1}
+											</button>
+										)
+									)}
+									<button
+										onClick={() =>
+											setFavPage((p) =>
+												p < Math.ceil(favorites.length / FAVS_PER_PAGE)
+													? p + 1
+													: p
+											)
+										}
+										disabled={
+											favPage >= Math.ceil(favorites.length / FAVS_PER_PAGE)
+										}
+										className="px-2 py-1 rounded bg-gray-400 text-black-700 hover:bg-gray-200 disabled:opacity-50 transition"
+									>
+										Next
+									</button>
+								</div>
+							)}
+						</div>
+
+						{/* Visited Sites Section */}
+						<div>
+							<h2 className="text-xl font-semibold mb-2">
+								Visited Sites Near You
+							</h2>
+							<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+								{(showAllVisited
+									? paginatedVisited
+									: paginatedVisited.slice(0, 4)
+								).map((site, idx) => (
+									<div
+										key={site._id}
+										className="bg-white rounded-xl shadow-md border border-gray-100 p-4 flex flex-col gap-2 hover:shadow-lg transition"
+									>
+										<div className="font-bold text-lg text-green-700">
+											{site.name}
+										</div>
+										<div className="text-sm text-gray-600">
+											Category:{" "}
+											<span className="font-medium">{site.category}</span>
+										</div>
+										<div className="text-xs text-gray-500">
+											Rating:{" "}
+											{siteReviews[site._id] &&
+											siteReviews[site._id].length > 0 ? (
+												<span>
+													{(
+														siteReviews[site._id].reduce(
+															(sum, r) => sum + r.rating,
+															0
+														) / siteReviews[site._id].length
+													).toFixed(1)}{" "}
+													<span className="text-yellow-500">★</span>
+												</span>
+											) : (
+												<span className="text-gray-400">No ratings</span>
+											)}
+										</div>
+										<div className="flex gap-2 mt-2">
+											{userId &&
+												Array.isArray(siteReviews[site._id]) &&
+												!hasUserReviewed(site._id, userId, siteReviews) && (
+													<button
+														onClick={() => handleReviewClick(site)}
+														className="bg-yellow-500 text-white px-2 py-1 rounded text-xs hover:bg-yellow-600 transition"
+													>
+														Review
+													</button>
+												)}
+											{reviewSite &&
+												reviewSite._id === site._id &&
+												userId &&
+												!hasUserReviewed(site._id, userId, siteReviews) && (
+													<Review
+														site={site}
+														onReviewSubmitted={async () => {
+															const res = await api.get(`/reviews/${site._id}`);
+															setSiteReviews((prev) => ({
+																...prev,
+																[site._id]: res.data,
+															}));
+															setReviewSite(null);
+														}}
+													/>
+												)}
+										</div>
+									</div>
+								))}
+							</div>
+							{paginatedVisited.length > 4 && (
+								<div className="flex justify-center my-5">
+									<button
+										onClick={() => setShowAllVisited((v) => !v)}
+										className="flex items-center gap-1 px-4 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium shadow transition"
+										aria-label={
+											showAllVisited
+												? "Show less visited sites"
+												: "See all visited sites"
+										}
+									>
+										{showAllVisited ? (
+											<>
+												<span>Show Less</span>
+												<svg
+													className="w-4 h-4"
+													fill="none"
+													stroke="currentColor"
+													strokeWidth={2}
+													viewBox="0 0 24 24"
+												>
+													<path
+														strokeLinecap="round"
+														strokeLinejoin="round"
+														d="M19 15l-7-7-7 7"
+													/>
+												</svg>
+											</>
+										) : (
+											<>
+												<span>See All</span>
+												<svg
+													className="w-4 h-4"
+													fill="none"
+													stroke="currentColor"
+													strokeWidth={2}
+													viewBox="0 0 24 24"
+												>
+													<path
+														strokeLinecap="round"
+														strokeLinejoin="round"
+														d="M5 9l7 7 7-7"
+													/>
+												</svg>
+											</>
+										)}
+									</button>
+								</div>
+							)}
+							{/* Pagination Controls */}
+							{showAllVisited && (
+								<div className="flex justify-end items-center gap-2 mt-2 mb-2 px-2">
+									<button
+										onClick={() => setVisitedPage((p) => Math.max(1, p - 1))}
+										disabled={visitedPage === 1}
+										className="px-2 py-1 rounded bg-green-100 text-green-700 hover:bg-green-200 disabled:opacity-50 transition"
+									>
+										Prev
+									</button>
+									{Array.from(
+										{
+											length: Math.ceil(visitedSites.length / VISITED_PER_PAGE),
+										},
+										(_, i) => (
+											<button
+												key={i}
+												onClick={() => setVisitedPage(i + 1)}
+												className={`px-2 py-1 rounded ${
+													visitedPage === i + 1
+														? "bg-green-600 text-white"
+														: "bg-green-50 text-green-700 hover:bg-green-200"
+												} transition`}
+											>
+												{i + 1}
+											</button>
+										)
+									)}
+									<button
+										onClick={() =>
+											setVisitedPage((p) =>
+												p < Math.ceil(visitedSites.length / VISITED_PER_PAGE)
+													? p + 1
+													: p
+											)
+										}
+										disabled={
+											visitedPage >=
+											Math.ceil(visitedSites.length / VISITED_PER_PAGE)
+										}
+										className="px-2 py-1 rounded bg-green-100 text-green-700 hover:bg-green-200 disabled:opacity-50 transition"
+									>
+										Next
+									</button>
+								</div>
+							)}
+						</div>
+					</div>
+				</aside>
+
+				{/* Map */}
+				<main className="flex-1 h-full w-full relative">
+					<div className="absolute inset-0 h-full w-full">
+						<CulturalMap
+							token={token}
+							categoryFilter={categoryFilter}
+							keyword={keyword}
+							onAddFavorite={addFavorite}
+							userLocation={userLocation}
+							onCatchSuccess={fetchInventory}
+						/>
+					</div>
+				</main>
 			</div>
 		</div>
 	);
