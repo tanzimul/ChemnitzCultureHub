@@ -1,6 +1,11 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 
+/**
+ * @middleware
+ * @desc    Authenticate user using JWT token in Authorization header
+ * @access  Private (used on protected routes)
+ */
 const auth = async (req, res, next) => {
 	try {
 		const token = req.header("Authorization")?.replace("Bearer ", "");

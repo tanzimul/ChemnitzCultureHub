@@ -2,6 +2,10 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const validator = require("validator");
 
+/**
+ * @model   User
+ * @desc    Represents an application user (profile, favorites, visited, inventory, etc.)
+ */
 const userSchema = new mongoose.Schema(
 	{
 		name: {

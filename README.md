@@ -73,18 +73,18 @@ ChemnitzCultureHub/
 
 ## 🛠️ API Endpoints (Backend)
 
-| Method | Route                             | Description                     | Auth |
-| ------ | --------------------------------- | ------------------------------- | ---- |
-| POST   | `/api/auth/register`              | Register user                   | ❌   |
-| POST   | `/api/auth/login`                 | Login user                      | ❌   |
-| GET    | `/api/user/me`                    | Get user info                   | ✅   |
-| PUT    | `/api/user`                       | Update user info                | ✅   |
-| GET    | `/api/culturalsites`              | List all cultural sites         | ✅   |
-| GET    | `/api/culturalsites/:id`          | Get details for a cultural site | ✅   |
-| POST   | `/api/culturalsites/:id/favorite` | Add to favorites                | ✅   |
-| DELETE | `/api/culturalsites/:id/favorite` | Remove from favorites           | ✅   |
-| POST   | `/api/culturalsites/:id/review`   | Add review                      | ✅   |
-| GET    | `/api/culturalsites/nearby`       | Get nearby sites by GPS         | ✅   |
+| Method | Route                      | Description                     | Auth |
+| ------ | -------------------------- | ------------------------------- | ---- |
+| POST   | `/api/auth/register`       | Register user                   | ❌   |
+| POST   | `/api/auth/login`          | Login user                      | ❌   |
+| GET    | `/api/user/me`             | Get user info                   | ✅   |
+| PUT    | `/api/user`                | Update user info                | ✅   |
+| GET    | `/api/culturalsites`       | List all cultural sites         | ✅   |
+| GET    | `/api/culturalsites/:id`   | Get details for a cultural site | ✅   |
+| POST   | `/api/users/favorites`     | Add to favorites                | ✅   |
+| DELETE | `/api/users/favorites/:id` | Remove from favorites           | ✅   |
+| GET    | `/api/users/visited-sites` | Get visited cultural sites      | ✅   |
+| PUT    | `/api/users/location`      | Update user's current location  | ✅   |
 
 ---
 
@@ -111,7 +111,7 @@ ChemnitzCultureHub/
 
 ## 🔧 Installation & Setup
 
-### Installation
+### 01. Installation
 
 ```bash
 git clone https://github.com/your-username/ChemnitzCultureHub.git
@@ -121,7 +121,7 @@ cd backend && npm install
 cd ../frontend && npm install
 ```
 
-### Environment Configuration
+### 02. Environment Configuration
 
 - **backend/.env**
 
@@ -139,7 +139,7 @@ cd ../frontend && npm install
 
 ---
 
-### Running the App
+### 03. Running the App
 
 From the root folder:
 

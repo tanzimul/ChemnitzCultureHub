@@ -1,4 +1,9 @@
 const mongoose = require("mongoose");
+
+/**
+ * @model   CulturalSite
+ * @desc    Represents a cultural site in Chemnitz (museum, artwork, theatre, restaurant, etc.)
+ */
 const culturalSiteSchema = new mongoose.Schema({
 	name: String,
 	category: String,

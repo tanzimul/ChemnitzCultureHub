@@ -1,8 +1,13 @@
 const User = require("../models/User");
 const CulturalSite = require("../models/CulturalSite");
 const Review = require("../models/Review");
+const TradeCode = require("../models/TradeCode");
 
-// Update User Profile
+/**
+ * @route   PUT /api/users/profile
+ * @desc    Update user profile
+ * @access  Private
+ */
 exports.updateProfile = async (req, res) => {
 	try {
 		const { name, email } = req.body;
@@ -32,14 +37,27 @@ exports.updateProfile = async (req, res) => {
 	}
 };
 
-// Add Favorite Location
+/**
+ * @route   POST /api/users/favorites
+ * @desc    Add favorite location
+ * @access  Private
+ */
 exports.addFavoriteLocation = async (req, res) => {
 	try {
 		const { siteId } = req.body;
 		const userId = req.user._id;
 		const user = await User.findById(userId);
+		const site = await CulturalSite.findById(siteId);
 
-		// Check for duplicate
+		// Prevent favoriting unwanted sites
+		if (
+			!site ||
+			["unknown", "uncategorized"].includes((site.name || "").toLowerCase()) ||
+			["unknown", "uncategorized"].includes((site.category || "").toLowerCase())
+		) {
+			return res.status(400).json({ message: "Cannot favorite this site." });
+		}
+
 		if (user.favorites.some((fav) => fav.toString() === siteId)) {
 			return res
 				.status(400)
@@ -59,7 +77,11 @@ exports.addFavoriteLocation = async (req, res) => {
 	}
 };
 
-// Remove Favorite Location
+/**
+ * @route   DELETE /api/users/favorites/:id
+ * @desc    Remove favorite location
+ * @access  Private
+ */
 exports.removeFavoriteLocation = async (req, res) => {
 	try {
 		const siteId = req.params.id;
@@ -82,7 +104,11 @@ exports.removeFavoriteLocation = async (req, res) => {
 	}
 };
 
-// Get User's Favorite Locations
+/**
+ * @route   GET /api/users/favorites
+ * @desc    Get user's favorite locations
+ * @access  Private
+ */
 exports.getFavoriteLocations = async (req, res) => {
 	try {
 		//const user = await User.findById(req.user._id);
@@ -94,7 +120,11 @@ exports.getFavoriteLocations = async (req, res) => {
 	}
 };
 
-// Update User Location
+/**
+ * @route   PUT /api/users/location
+ * @desc    Update user's current location
+ * @access  Private
+ */
 exports.updateLocation = async (req, res) => {
 	try {
 		const userId = req.user._id;
@@ -130,12 +160,16 @@ exports.updateLocation = async (req, res) => {
 	}
 };
 
-// Get User Profile
+/**
+ * @route   GET /api/users/me
+ * @desc    Get user profile
+ * @access  Private
+ */
 exports.getMe = async (req, res) => {
 	try {
 		const user = await User.findById(req.user._id)
 			.select("-password")
-			.populate("inventory.site"); // <-- populate site details
+			.populate("inventory.site");
 		if (!user) {
 			return res.status(404).json({ message: "User not found" });
 		}
@@ -146,7 +180,11 @@ exports.getMe = async (req, res) => {
 	}
 };
 
-// Delete User Profile
+/**
+ * @route   DELETE /api/users/me
+ * @desc    Delete user profile
+ * @access  Private
+ */
 exports.deleteMe = async (req, res) => {
 	try {
 		const userId = req.user._id;
@@ -176,7 +214,11 @@ exports.deleteMe = async (req, res) => {
 	}
 };
 
-// Get User Stats (Favorites, Visited, Inventory)
+/**
+ * @route   GET /api/users/me/stats
+ * @desc    Get user's stats (favorites, visited, inventory)
+ * @access  Private
+ */
 exports.getUserStats = async (req, res) => {
 	try {
 		const user = await User.findById(req.user._id)
@@ -190,13 +232,18 @@ exports.getUserStats = async (req, res) => {
 			favorites: user.favorites ? user.favorites.length : 0,
 			visited: user.visitedSites ? user.visitedSites.length : 0,
 			inventory: user.inventory ? user.inventory.length : 0,
+			userlocation: user.currentLocation || null,
 		});
 	} catch (err) {
 		res.status(500).json({ message: "Failed to fetch stats" });
 	}
 };
 
-// Get Nearby Cultural Sites
+/**
+ * @route   GET /api/users/visited-sites
+ * @desc    Get user's visited cultural sites (and collect new nearby)
+ * @access  Private
+ */
 exports.collectAndGetVisitedSites = async (req, res) => {
 	try {
 		const user = await User.findById(req.user._id);
@@ -209,7 +256,7 @@ exports.collectAndGetVisitedSites = async (req, res) => {
 		const [lng, lat] = user.currentLocation.coordinates;
 		const maxDistance = parseInt(req.query.maxDistance) || 1000; // meters
 
-		// Find nearby sites
+		// Find nearby sites, filter out unwanted ones
 		const nearbySites = await CulturalSite.find({
 			location: {
 				$near: {
@@ -217,9 +264,10 @@ exports.collectAndGetVisitedSites = async (req, res) => {
 					$maxDistance: maxDistance,
 				},
 			},
+			name: { $nin: ["Unknown", "unknown"] },
+			category: { $nin: ["Uncategorized", "uncategorized"] },
 		});
 
-		// Add new visited sites to user.visitedSites
 		const newVisited = nearbySites
 			.filter((site) => !user.visitedSites.some((id) => id.equals(site._id)))
 			.map((site) => site._id);
@@ -229,7 +277,6 @@ exports.collectAndGetVisitedSites = async (req, res) => {
 			await user.save();
 		}
 
-		// Populate and return visited sites
 		await user.populate("visitedSites");
 		res.json(user.visitedSites);
 	} catch (error) {
@@ -238,11 +285,25 @@ exports.collectAndGetVisitedSites = async (req, res) => {
 	}
 };
 
-// Catch a Cultural Site
+/**
+ * @route   POST /api/users/catch-site
+ * @desc    Catch a cultural site (add to inventory)
+ * @access  Private
+ */
 exports.catchSite = async (req, res) => {
 	try {
 		const user = await User.findById(req.user._id);
 		const { siteId } = req.body;
+		const site = await CulturalSite.findById(siteId);
+
+		// Prevent saving unwanted sites
+		if (
+			!site ||
+			["unknown", "uncategorized"].includes((site.name || "").toLowerCase()) ||
+			["unknown", "uncategorized"].includes((site.category || "").toLowerCase())
+		) {
+			return res.status(400).json({ message: "Cannot catch this site." });
+		}
 
 		let entry = user.inventory.find((c) => c.site.toString() === siteId);
 		if (entry) {
@@ -260,14 +321,89 @@ exports.catchSite = async (req, res) => {
 	}
 };
 
-// Trade a Cultural Site
+// /**
+//  * @route   POST /api/users/trade-site
+//  * @desc    Trade a cultural site with another user
+//  * @access  Private
+//  */
+// exports.tradeSite = async (req, res) => {
+// 	try {
+// 		const { toUserId, siteId } = req.body;
+// 		const fromUser = await User.findById(req.user._id);
+// 		const toUser = await User.findById(toUserId);
+// 		const site = await CulturalSite.findById(siteId);
+
+// 		// Prevent trading unwanted sites
+// 		if (
+// 			!site ||
+// 			["unknown", "uncategorized"].includes((site.name || "").toLowerCase()) ||
+// 			["unknown", "uncategorized"].includes((site.category || "").toLowerCase())
+// 		) {
+// 			return res.status(400).json({ message: "Cannot trade this site." });
+// 		}
+
+// 		// ...existing trade logic...
+// 		const fromEntry = fromUser.inventory.find(
+// 			(c) => c.site.toString() === siteId
+// 		);
+// 		if (!fromEntry || fromEntry.count < 1) {
+// 			return res
+// 				.status(400)
+// 				.json({ message: "You don't have this site to trade." });
+// 		}
+// 		fromEntry.count -= 1;
+// 		fromEntry.tradeHistory.push({ to: toUserId, type: "sent" });
+// 		if (fromEntry.count === 0) {
+// 			fromUser.inventory = fromUser.inventory.filter(
+// 				(c) => c.site.toString() !== siteId
+// 			);
+// 		}
+
+// 		let toEntry = toUser.inventory.find((c) => c.site.toString() === siteId);
+// 		if (toEntry) {
+// 			toEntry.count += 1;
+// 			toEntry.tradeHistory.push({ to: fromUser._id, type: "received" });
+// 		} else {
+// 			toUser.inventory.push({
+// 				site: siteId,
+// 				count: 1,
+// 				tradeHistory: [{ to: fromUser._id, type: "received" }],
+// 			});
+// 		}
+
+// 		await fromUser.save();
+// 		await toUser.save();
+
+// 		res.json({ message: "Trade successful!" });
+// 	} catch (error) {
+// 		res.status(500).json({ message: "Trade failed", error: error.message });
+// 	}
+// };
+
+/**
+ * @route   POST /api/users/generate-trade-code
+ * @desc    Generate a trade code for trading sites
+ * @access  Private
+ */
 exports.tradeSite = async (req, res) => {
 	try {
-		const { toUserId, siteId } = req.body;
+		const { tradeCode, siteId } = req.body;
 		const fromUser = await User.findById(req.user._id);
-		const toUser = await User.findById(toUserId);
 
-		// Remove from sender
+		// Use your existing trade code logic
+		const tradeCodeDoc = await TradeCode.findOne({ code: tradeCode }).populate(
+			"user"
+		);
+		if (!tradeCodeDoc || tradeCodeDoc.expiresAt < new Date()) {
+			return res
+				.status(400)
+				.json({ message: "Invalid or expired trade code." });
+		}
+		const toUser = tradeCodeDoc.user;
+
+		const site = await CulturalSite.findById(siteId);
+
+		// ...existing trade logic...
 		const fromEntry = fromUser.inventory.find(
 			(c) => c.site.toString() === siteId
 		);
@@ -277,14 +413,13 @@ exports.tradeSite = async (req, res) => {
 				.json({ message: "You don't have this site to trade." });
 		}
 		fromEntry.count -= 1;
-		fromEntry.tradeHistory.push({ to: toUserId, type: "sent" });
+		fromEntry.tradeHistory.push({ to: toUser._id, type: "sent" });
 		if (fromEntry.count === 0) {
 			fromUser.inventory = fromUser.inventory.filter(
 				(c) => c.site.toString() !== siteId
 			);
 		}
 
-		// Add to receiver
 		let toEntry = toUser.inventory.find((c) => c.site.toString() === siteId);
 		if (toEntry) {
 			toEntry.count += 1;
@@ -299,6 +434,7 @@ exports.tradeSite = async (req, res) => {
 
 		await fromUser.save();
 		await toUser.save();
+		await TradeCode.deleteOne({ code: tradeCode });
 
 		res.json({ message: "Trade successful!" });
 	} catch (error) {

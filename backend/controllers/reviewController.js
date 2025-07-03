@@ -1,6 +1,11 @@
 const Review = require("../models/Review");
 const User = require("../models/User");
 
+/**
+ * @route   POST /api/review
+ * @desc    Add a review for a cultural site
+ * @access  Private
+ */
 exports.addReview = async (req, res) => {
 	try {
 		const { site, rating, comment } = req.body;
@@ -29,6 +34,11 @@ exports.addReview = async (req, res) => {
 	}
 };
 
+/**
+ * @route   GET /api/review/:siteId
+ * @desc    Get all reviews for a specific cultural site
+ * @access  Public
+ */
 exports.getReviewsForSite = async (req, res) => {
 	try {
 		const reviews = await Review.find({ site: req.params.siteId }).populate(

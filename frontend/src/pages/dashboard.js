@@ -9,7 +9,7 @@ import Review from "@/components/Review/Review";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/router";
 import InventoryList from "@/components/CulturalCollection/InventoryList";
-import TradeForm from "@/components/CulturalCollection/TradeForm";
+import TradeForm from "@/components/Trade/TradeForm";
 
 // Dynamically import the map component (client-side only)
 const CulturalMap = dynamic(
@@ -36,6 +36,19 @@ function getCategory(props) {
 function capitalize(str) {
 	if (!str) return "";
 	return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+// Utility to clean up category names
+function cleanCategory(cat) {
+	if (!cat) return null;
+	const skip = ["uncategorized", "yes", "information", "unknown", ""];
+	const cleaned = cat
+		.replace(/_/g, " ")
+		.replace(/;/g, ", ")
+		.trim()
+		.toLowerCase();
+	if (skip.includes(cleaned)) return null;
+	return cleaned.replace(/\b\w/g, (l) => l.toUpperCase());
 }
 
 // Check if user has reviewed a site
@@ -70,6 +83,7 @@ export default function DashboardPage() {
 	const [showInventory, setShowInventory] = useState(false);
 	const [showAllFavorites, setShowAllFavorites] = useState(false);
 	const [showAllVisited, setShowAllVisited] = useState(false);
+	// const [showLocationConfirm, setShowLocationConfirm] = useState(false);
 
 	const FAVS_PER_PAGE = 10;
 	const VISITED_PER_PAGE = 10;
@@ -153,8 +167,19 @@ export default function DashboardPage() {
 				});
 				const sites = res.data;
 				const categories = Array.from(
-					new Set(sites.map((site) => getCategory(site.properties || site)))
-				);
+					new Set(
+						sites.flatMap((site) => {
+							const raw = getCategory(site.properties || site);
+							if (!raw) return [];
+							return raw
+								.split(/[;,]/)
+								.map((cat) => cleanCategory(cat))
+								.filter(Boolean);
+						})
+					)
+				)
+					.filter((cat) => cat && cat.toLowerCase() !== "uncategorized") // <-- filter here
+					.sort();
 				setAllCategories(categories);
 			} catch (err) {
 				console.error("Error fetching sites for categories:", err);
@@ -193,43 +218,6 @@ export default function DashboardPage() {
 	// Handle review button click
 	const handleReviewClick = (site) => {
 		setReviewSite(site);
-	};
-
-	// Handle location update
-	const handleGetLocation = () => {
-		if (!window.confirm("Do you allow us to access your current location?"))
-			return;
-
-		if ("geolocation" in navigator) {
-			navigator.geolocation.getCurrentPosition(
-				async (position) => {
-					const { latitude, longitude } = position.coords;
-					try {
-						await api.put(
-							"/users/location",
-							{ latitude, longitude },
-							{ headers: { Authorization: `Bearer ${token}` } }
-						);
-						const res = await api.get("/users/me", {
-							headers: { Authorization: `Bearer ${token}` },
-						});
-						if (res.data.currentLocation) {
-							setUserLocation(res.data.currentLocation);
-						}
-						const visitedRes = await api.get("/users/visited-sites");
-						setVisitedSites(visitedRes.data);
-						toast.success("Location saved!");
-					} catch (err) {
-						toast.error("Failed to save location.");
-					}
-				},
-				() => {
-					toast.error("Unable to retrieve your location.");
-				}
-			);
-		} else {
-			toast.error("Geolocation is not supported by your browser.");
-		}
 	};
 
 	// Add favorite
@@ -279,20 +267,21 @@ export default function DashboardPage() {
 
 	return (
 		<div className="pt-0 h-[calc(100vh-64px)]">
-			<Toaster
+			{/* <Toaster
 				position="top-right"
 				containerClassName="mt-16"
 				toastOptions={{
 					style: { marginTop: "4rem" },
 				}}
-			/>
-			<div className="flex h-full">
+			/> */}
+
+			<div className="flex flex-col lg:flex-row h-full">
 				{/* Sidebar */}
-				<aside className="relative z-10 w-full lg:w-[40%] bg-white border-r border-gray-200 flex-shrink-0 flex flex-col h-screen max-h-screen overflow-y-auto shadow-lg">
-					<div className="px-6 py-4 border-b border-gray-100">
+				<aside className="relative z-10 w-full lg:w-[40%] max-h-[60vh] lg:max-h-screen overflow-y-auto bg-white border-r border-gray-200 flex-shrink-0 flex flex-col shadow-lg">
+					<div className="px-3 py-3 sm:px-6 sm:py-4 border-b border-gray-100">
 						<h1 className="text-2xl font-bold mb-2 px-2">Dashboard</h1>
 						<div className="flex flex-col gap-3">
-							<div className="flex gap-2">
+							<div className="flex flex-col sm:flex-row gap-2">
 								<input
 									type="text"
 									placeholder="Search cultural sites..."
@@ -304,7 +293,7 @@ export default function DashboardPage() {
 									onClick={() => {
 										/* Optionally trigger search/filter logic here */
 									}}
-									className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-3 flex items-center justify-center transition"
+									className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-3 flex items-center justify-center transition"
 									aria-label="Search"
 								>
 									<svg
@@ -323,7 +312,7 @@ export default function DashboardPage() {
 									</svg>
 								</button>
 							</div>
-							<div className="flex gap-2">
+							<div className="flex flex-col sm:flex-row gap-2">
 								<select
 									onChange={(e) => setCategoryFilter(e.target.value)}
 									value={categoryFilter}
@@ -341,68 +330,15 @@ export default function DashboardPage() {
 										setKeyword("");
 										setCategoryFilter("");
 									}}
-									className="bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl px-3 py-2 font-medium transition"
+									className="w-full sm:w-auto bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl px-3 py-2 font-medium transition"
 									aria-label="Clear all filters"
 								>
 									Clear
 								</button>
 							</div>
-							<div className="flex gap-3">
-								<button
-									onClick={handleGetLocation}
-									className="flex items-center justify-center gap-2 bg-gradient-to-r from-blue-500 to-blue-700 text-white px-4 py-2 rounded-xl font-semibold shadow hover:from-blue-600 hover:to-blue-800 transition"
-								>
-									<span>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											className="h-5 w-5 inline-block mr-1"
-											fill="none"
-											viewBox="0 0 24 24"
-											stroke="currentColor"
-										>
-											<path
-												strokeLinecap="round"
-												strokeLinejoin="round"
-												strokeWidth={2}
-												d="M12 3v2m0 14v2m9-9h-2M5 12H3m15.364-6.364l-1.414 1.414M6.343 17.657l-1.414 1.414M17.657 17.657l-1.414-1.414M6.343 6.343L4.929 4.929M12 8a4 4 0 100 8 4 4 0 000-8z"
-											/>
-										</svg>
-									</span>
-									Save My Current Location
-								</button>
-								{userId && (
-									<button
-										onClick={() => {
-											navigator.clipboard.writeText(userId);
-											toast.success(
-												"Your User ID has been copied to the clipboard!"
-											);
-										}}
-										className="flex items-center justify-center gap-2 bg-gray-100 border border-gray-300 text-gray-700 px-4 py-2 rounded-xl font-semibold shadow hover:bg-gray-200 transition"
-									>
-										<span>
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												className="h-5 w-5 inline-block mr-1"
-												fill="none"
-												viewBox="0 0 24 24"
-												stroke="currentColor"
-											>
-												<path
-													strokeLinecap="round"
-													strokeLinejoin="round"
-													strokeWidth={2}
-													d="M8 16h8M8 12h8m-7 8h6a2 2 0 002-2V6a2 2 0 00-2-2H9a2 2 0 00-2 2v12a2 2 0 002 2z"
-												/>
-											</svg>
-										</span>
-										Copy My User ID
-									</button>
-								)}
-							</div>
 						</div>
 					</div>
-					<div className="flex-1 overflow-y-auto px-6 py-4">
+					<div className="flex-1 overflow-y-auto px-3 py-3 sm:px-6 sm:py-4">
 						<div className="mb-4">
 							<button
 								onClick={() => setShowInventory((v) => !v)}
@@ -411,15 +347,18 @@ export default function DashboardPage() {
 								<span>{showInventory ? "▼" : "►"}</span>
 								My Inventory
 							</button>
-							{showInventory && <InventoryList onLoaded={setInventory} />}
+							{showInventory && (
+								<>
+									<InventoryList onLoaded={setInventory} />
+									<TradeForm inventory={inventory} />
+								</>
+							)}
 						</div>
-
-						<TradeForm inventory={inventory} />
 
 						{/* My Favorites Section */}
 						<div className="mt-6">
 							<h2 className="text-xl font-semibold mb-2">My Favorites</h2>
-							<div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-2">
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
 								{(showAllFavorites
 									? paginatedFavorites
 									: paginatedFavorites.slice(0, 4)
@@ -577,7 +516,7 @@ export default function DashboardPage() {
 							<h2 className="text-xl font-semibold mb-2">
 								Visited Sites Near You
 							</h2>
-							<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 								{(showAllVisited
 									? paginatedVisited
 									: paginatedVisited.slice(0, 4)
@@ -605,6 +544,17 @@ export default function DashboardPage() {
 														) / siteReviews[site._id].length
 													).toFixed(1)}{" "}
 													<span className="text-yellow-500">★</span>
+													{siteReviews[site._id]
+														.filter((r) => r.comment && r.comment.trim() !== "")
+														.slice(-1)
+														.map((r, i) => (
+															<div
+																key={i}
+																className="mt-1 text-gray-600 italic"
+															>
+																“{r.comment}”
+															</div>
+														))}
 												</span>
 											) : (
 												<span className="text-gray-400">No ratings</span>
@@ -741,7 +691,7 @@ export default function DashboardPage() {
 				</aside>
 
 				{/* Map */}
-				<main className="flex-1 h-full w-full relative">
+				<main className="flex-1 min-h-[300px] h-[50vh] lg:h-full w-full relative">
 					<div className="absolute inset-0 h-full w-full">
 						<CulturalMap
 							token={token}

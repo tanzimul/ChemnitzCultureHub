@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import api from "@/utils/api";
 import Cookies from "js-cookie";
 import { useRouter } from "next/router";
+import TradeCodeGenerator from "@/components/Trade/TradeCodeGenerator";
+import toast from "react-hot-toast";
 
 export default function Profile() {
 	const [user, setUser] = useState(null);
@@ -19,6 +21,14 @@ export default function Profile() {
 	});
 	const [deleting, setDeleting] = useState(false);
 	const router = useRouter();
+	const [locationLoading, setLocationLoading] = useState(false);
+	const [showLocationConfirm, setShowLocationConfirm] = useState(false);
+	const [token, setToken] = useState("");
+	// Get token from cookies on mount
+	useEffect(() => {
+		const stored = Cookies.get("token");
+		if (stored) setToken(stored);
+	}, []);
 
 	useEffect(() => {
 		const userData = Cookies.get("user");
@@ -36,6 +46,8 @@ export default function Profile() {
 					setStats(res.data);
 				})
 				.catch(() => {});
+		} else {
+			router.push("/");
 		}
 	}, []);
 
@@ -62,6 +74,7 @@ export default function Profile() {
 					id: updatedUser._id,
 					name: updatedUser.name,
 					email: updatedUser.email,
+					createdAt: updatedUser.createdAt,
 				}),
 				{ expires: 7 }
 			);
@@ -93,6 +106,44 @@ export default function Profile() {
 			setError("Failed to delete profile.");
 		} finally {
 			setDeleting(false);
+		}
+	};
+
+	const handleGetLocation = () => {
+		setShowLocationConfirm(true);
+	};
+
+	const handleConfirmLocation = (allow) => {
+		setShowLocationConfirm(false);
+		if (!allow) return;
+
+		if ("geolocation" in navigator) {
+			setLocationLoading(true);
+			navigator.geolocation.getCurrentPosition(
+				async (position) => {
+					const { latitude, longitude } = position.coords;
+					try {
+						const res = await api.put(
+							"/users/location",
+							{ latitude, longitude },
+							{ headers: { Authorization: `Bearer ${token}` } }
+						);
+						toast.success("Location saved!");
+						const statsRes = await api.get("/users/me/stats");
+						setStats(statsRes.data);
+					} catch (err) {
+						toast.error("Failed to save location.");
+						console.error("Error saving location:", err);
+					}
+					setLocationLoading(false);
+				},
+				() => {
+					toast.error("Unable to retrieve your location.");
+					setLocationLoading(false);
+				}
+			);
+		} else {
+			toast.error("Geolocation is not supported by your browser.");
 		}
 	};
 
@@ -154,7 +205,84 @@ export default function Profile() {
 						</div>
 					</div>
 				</div>
+				<div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+					{/* Save My Current Location Card */}
+					<div
+						onClick={handleGetLocation}
+						className={`cursor-pointer flex items-center gap-3 p-4 rounded-xl shadow border border-blue-200 bg-blue-50 hover:bg-blue-100 transition ${
+							locationLoading ? "opacity-60 pointer-events-none" : ""
+						}`}
+						title="Click to save your current location"
+					>
+						<svg
+							className="h-7 w-7 text-blue-600"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke="currentColor"
+						>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M12 11.5a2 2 0 100-4 2 2 0 000 4zm0 8.5c-4-5-7-7.5-7-11A7 7 0 0112 2a7 7 0 017 7c0 3.5-3 6-7 11z"
+							/>
+						</svg>
+						<div>
+							<div className="font-semibold text-blue-700">
+								Save My Current Location
+							</div>
+							<div className="text-xs text-blue-500">
+								{locationLoading
+									? "Saving..."
+									: "Click to update your location"}
+							</div>
+							<div className="text-xs text-blue-700 mt-2">
+								{stats.userlocation && stats.userlocation.coordinates ? (
+									<>
+										Your Location:{" "}
+										<span className="font-mono">
+											{stats.userlocation.coordinates[1]},{" "}
+											{stats.userlocation.coordinates[0]}
+										</span>
+									</>
+								) : (
+									<span>You haven't saved your location yet!</span>
+								)}
+							</div>
+						</div>
+					</div>
 
+					{/* Generate Trade Code Card */}
+					<div className="flex flex-col gap-2 p-4 rounded-xl shadow border border-green-200 bg-green-50">
+						<TradeCodeGenerator />
+					</div>
+				</div>
+				{showLocationConfirm && (
+					<div className="fixed inset-0 flex items-center justify-center z-[9999] bg-black/30 backdrop-blur-sm">
+						<div className="bg-white/70 backdrop-blur-lg rounded-lg shadow-lg p-6 max-w-sm w-full border border-white/40">
+							<h2 className="text-lg font-semibold mb-4">
+								Allow Location Access
+							</h2>
+							<p className="mb-6">
+								Do you allow us to access your current location?
+							</p>
+							<div className="flex justify-end gap-3">
+								<button
+									onClick={() => handleConfirmLocation(false)}
+									className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium"
+								>
+									Cancel
+								</button>
+								<button
+									onClick={() => handleConfirmLocation(true)}
+									className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+								>
+									Allow
+								</button>
+							</div>
+						</div>
+					</div>
+				)}
 				<form onSubmit={handleSubmit} className="space-y-6">
 					<div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
 						<div>

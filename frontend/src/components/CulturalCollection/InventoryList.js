@@ -7,7 +7,6 @@ export default function InventoryList({ onLoaded }) {
 	useEffect(() => {
 		api.get("/users/me").then((res) => {
 			const inv = res.data.inventory || [];
-			console.log("User inventory:", inv);
 			setInventory(inv);
 			if (onLoaded) onLoaded(inv);
 		});
